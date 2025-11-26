@@ -16,7 +16,7 @@ const IssueReporterMap = {
   [IssueReporter.Sentry]: 'Sentry',
 };
 
-export async function sendActiveBugReminder(env: Env) {
+export async function sendDailyBugReminder(env: Env) {
   const today = new Date();
 
   const pics = await getSchedule(env, today);
@@ -406,7 +406,7 @@ export async function sendActiveBugReminder(env: Env) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      channel: env.SLACK_CHANNEL,
+      channel: env.DAILY_SLACK_CHANNEL,
       blocks,
     }),
   });
