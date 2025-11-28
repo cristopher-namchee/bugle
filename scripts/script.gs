@@ -18,7 +18,12 @@ function getBugReport(sheet) {
 }
 
 function getPerformanceReport(sheet) {
-  return null;
+  return [
+    sheet.getRange(27, 11).getValue(),
+    sheet.getRange(28, 11).getValue(),
+    sheet.getRange(29, 11).getValue(),
+    sheet.getRange(30, 11).getValue(),
+  ];
 }
 
 function doGet() {
@@ -27,9 +32,15 @@ function doGet() {
     const sheet = ss.getSheets()[4];
 
     const bugs = getBugReport(sheet);
+    const performance = getPerformanceReport(sheet);
+
+    const data = {
+      bugs,
+      performance,
+    };
 
     return ContentService
-      .createTextOutput(JSON.stringify({ status: 'success', data: bugs }))
+      .createTextOutput(JSON.stringify({ status: 'success', data }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (err) {
     const self = Session.getActiveUser().getEmail();
