@@ -37,22 +37,18 @@ function doGet() {
     GmailApp.sendEmail(self, '🚨 [Bugle] Failed to Execute Script', '', {
       htmlBody: `
         <div style="font-family: Helvetica, Arial, sans-serif; color: #333; line-height: 1.6;">
-          <h2>🚨 Failed to read PIC Data</h2>
+          <h2>🚨 Failed to execute script</h2>
 
-          <p><b>Deploynaut</b> failed to read PIC's email. Possible causes are:</p>
+          <p><b>Bugle</b> failed to execute due to:</p>
 
-          <ul>
-            <li>PIC names are not defined inside a <a href="https://support.google.com/docs/answer/12319513?hl=en">smart chip</a></li>
-            <li>The PIC names are invalid</li>
-            <li>The data hasn't been filled yet</li>
-          </ul>
-
-          <p>Please do a manual check to the <a href="https://docs.google.com/spreadsheets/d/${shiftSheet}">deployment shift sheet</a>.</p>
+          <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; padding: 10px 15px; border-radius: 6px; margin: 10px 0;">
+            <pre style="margin: 0; font-family: Consolas, monospace; white-space: pre-wrap;">${err.message}</pre>
+          </div>
 
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
 
           <p style="font-size: 13px; color: #666;">
-            This is an automated message from <b>Deploynaut</b>.
+            This is an automated message from <b>Bugle</b>.
           </p>
         </div>`,
     });
