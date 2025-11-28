@@ -7,13 +7,16 @@
 	"name": "bugle",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-11-26",
-	"assets": {
-		"binding": "ASSETS",
-		"directory": "./public"
-	},
 	"observability": {
 		"enabled": true
-	}
+	},
+	"triggers": {
+		"crons": [
+			"0 3 * * *", // daily bug report 
+			"0 8 * * 5", // weekly reports
+		]
+	},
+	"keep_vars": true
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
