@@ -16,6 +16,11 @@ type BugsData = {
   external: BugReport;
 };
 
+interface Report {
+  bugs: BugsData;
+  performance: [string, string, string, string];
+}
+
 interface SuccessResponse<T> {
   status: 'success';
   data: T;
@@ -57,7 +62,7 @@ export async function getSchedule(env: Env, date: Date) {
   }
 }
 
-export async function getWeeklyBugList(env: Env) {
+export async function getReport(env: Env) {
   const url = new URL(env.SCRIPT_URL);
   const params = new URLSearchParams();
 
@@ -70,7 +75,7 @@ export async function getWeeklyBugList(env: Env) {
       throw new Error(`AppsScript returned ${response.status}`);
     }
 
-    const body = (await response.json()) as AppsScriptResponse<BugsData>;
+    const body = (await response.json()) as AppsScriptResponse<Report>;
     if (body.status === 'failed') {
       throw new Error(body.message);
     }

@@ -1,10 +1,15 @@
 import { formatDate } from '@/lib/date';
-import { getWeeklyBugList } from '@/lib/sheet';
+import { getReport } from '@/lib/sheet';
 
 import type { Env } from '@/types';
 
 export async function sendWeeklyBugReport(env: Env) {
-  const weeklyStats = await getWeeklyBugList(env);
+  const weeklyStats = await getReport(env);
+  if (!weeklyStats) {
+    return;
+  }
+
+  const { bugs, performance } = weeklyStats.data;
 
   // should be Saturday
   const today = new Date();
@@ -41,7 +46,7 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `Total Opened: ${weeklyStats?.data.internal.open.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${weeklyStats?.data.internal.open[0]} bugs\n        P1: ${weeklyStats?.data.internal.open[1]} bugs\n        P2: ${weeklyStats?.data.internal.open[2]} bugs\n\nTotal Closed: ${weeklyStats?.data.internal.closed.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${weeklyStats?.data.internal.closed[0]} bugs\n        P1: ${weeklyStats?.data.internal.closed[1]} bugs\n        P2: ${weeklyStats?.data.internal.closed[2]} bugs\n        Closed as Enhancement: ${weeklyStats?.data.internal.closed[3]} bugs`,
+        text: `Total Opened: ${bugs.internal.open.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${bugs.internal.open[0]} bugs\n        P1: ${bugs.internal.open[1]} bugs\n        P2: ${bugs.internal.open[2]} bugs\n\nTotal Closed: ${bugs.internal.closed.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${bugs.internal.closed[0]} bugs\n        P1: ${bugs.internal.closed[1]} bugs\n        P2: ${bugs.internal.closed[2]} bugs\n        Closed as Enhancement: ${bugs.internal.closed[3]} bugs`,
       },
     },
     {
@@ -58,7 +63,24 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `Total Opened: ${weeklyStats?.data.external.open.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${weeklyStats?.data.external.open[0]} bugs\n        P1: ${weeklyStats?.data.external.open[1]} bugs\n        P2: ${weeklyStats?.data.external.open[2]} bugs\n\nTotal Closed: ${weeklyStats?.data.external.closed.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${weeklyStats?.data.external.closed[0]} bugs\n        P1: ${weeklyStats?.data.external.closed[1]} bugs\n        P2: ${weeklyStats?.data.external.closed[2]} bugs\n        Closed as Enhancement: ${weeklyStats?.data.external.closed[3]} bugs`,
+        text: `Total Opened: ${bugs.external.open.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${bugs.external.open[0]} bugs\n        P1: ${bugs.external.open[1]} bugs\n        P2: ${bugs.external.open[2]} bugs\n\nTotal Closed: ${bugs.external.closed.reduce((acc, curr) => acc + curr, 0)} bugs\n        P0: ${bugs.external.closed[0]} bugs\n        P1: ${bugs.external.closed[1]} bugs\n        P2: ${bugs.external.closed[2]} bugs\n        Closed as Enhancement: ${bugs.external.closed[3]} bugs`,
+      },
+    },
+    {
+      type: 'divider',
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*GLChat Performance Report*`,
+      },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `_${performance[0]}_\n        ${performance[1]}\n        ${performance[2]}\n        ${performance[3]}`,
       },
     },
   ];
