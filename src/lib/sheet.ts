@@ -29,14 +29,13 @@ interface ErrorResponse {
 type AppsScriptResponse<T = undefined> = SuccessResponse<T> | ErrorResponse;
 
 export async function getSchedule(env: Env, date: Date) {
-  const url = new URL(env.SCRIPT_URL);
+  const url = new URL(env.SHIFT_URL);
   const params = new URLSearchParams();
 
   params.set(
     'date',
     `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`,
   );
-  params.set('route', '/shift');
 
   url.search = params.toString();
 
@@ -61,8 +60,6 @@ export async function getSchedule(env: Env, date: Date) {
 export async function getWeeklyBugList(env: Env) {
   const url = new URL(env.SCRIPT_URL);
   const params = new URLSearchParams();
-
-  params.set('route', '/bugs');
 
   url.search = params.toString();
 

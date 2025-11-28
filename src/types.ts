@@ -3,6 +3,7 @@ export interface Env {
   DAILY_SLACK_CHANNEL: string;
   WEEKLY_SLACK_CHANNEL: string;
   SCRIPT_URL: string;
+  SHIFT_URL: string;
   GITHUB_TOKEN: string;
 }
 

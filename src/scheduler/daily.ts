@@ -42,7 +42,7 @@ export async function sendDailyBugReminder(env: Env) {
       Accept: 'application/vnd.github+json',
       Authorization: `Bearer ${env.GITHUB_TOKEN}`,
       'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'deploynaut',
+      'User-Agent': 'bugle',
     },
   });
 
@@ -75,7 +75,7 @@ export async function sendDailyBugReminder(env: Env) {
               Accept: 'application/vnd.github+json',
               Authorization: `Bearer ${env.GITHUB_TOKEN}`,
               'X-GitHub-Api-Version': '2022-11-28',
-              'User-Agent': 'deploynaut',
+              'User-Agent': 'bugle',
             },
           });
 
