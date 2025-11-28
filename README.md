@@ -1,21 +1,11 @@
-```txt
-npm install
-npm run dev
-```
+# Bugle
 
-```txt
-npm run deploy
-```
+A Slack bot that curates daily and weekly bugs on GLChat.
 
-[For generating/synchronizing types based on your Worker configuration run](https://developers.cloudflare.com/workers/wrangler/commands/#types):
+## Contributing
 
-```txt
-npm run cf-typegen
-```
+No, not yet
 
-Pass the `CloudflareBindings` as generics when instantiation `Hono`:
+## License
 
-```ts
-// src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
-```
+This project is licensed under the [Unlicense](./LICENSE)
