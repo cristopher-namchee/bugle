@@ -5,7 +5,7 @@ import type { Env } from './types';
 
 const schedules: Record<string, (env: Env) => Promise<void>> = {
   '0 3 * * *': sendDailyBugReminder,
-  '0 8 * * 5': sendWeeklyBugReport,
+  '0 8 * * 6': sendWeeklyBugReport,
 };
 
 export default {

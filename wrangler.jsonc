@@ -13,7 +13,7 @@
 	"triggers": {
 		"crons": [
 			"0 3 * * *", // daily bug report 
-			"0 8 * * 5", // weekly reports
+			"0 8 * * 6", // weekly reports
 		]
 	},
 	"keep_vars": true
