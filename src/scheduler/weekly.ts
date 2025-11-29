@@ -82,6 +82,23 @@ export async function sendWeeklyBugReport(env: Env) {
         text: `_${performance[0]}_\n        ${performance[1]}\n        ${performance[2]}\n        ${performance[3]}`,
       },
     },
+    {
+      type: 'divider',
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*GL AIP Performance Report*`,
+      },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `_${performance[0]}_\n        ${performance[1]}\n        ${performance[2]}\n        ${performance[3]}`,
+      },
+    },
   ];
 
   await fetch('https://slack.com/api/chat.postMessage', {

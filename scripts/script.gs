@@ -1,4 +1,5 @@
 const bugsSheet = '1ZGlbEKvVqaP4BL2a81sKSHaBJw11cYxkyKQpCPdPV7A';
+const aipSheet = '1cs1OThqveeEb0cQPOcjsZGwewc6nuFargQ9DPL0UmqE';
 
 function getBugReport(sheet) {
   const internalOpen = [
@@ -17,7 +18,7 @@ function getBugReport(sheet) {
   return { internal: { open: internalOpen, closed: internalClosed }, external: { open: externalOpen, closed: externalClosed } };
 }
 
-function getPerformanceReport(sheet) {
+function getLLMPerformanceReport(sheet) {
   return [
     sheet.getRange(27, 11).getValue(),
     sheet.getRange(28, 11).getValue(),
@@ -26,17 +27,46 @@ function getPerformanceReport(sheet) {
   ];
 }
 
+function getAIPReport() {
+  const ss = SpreadsheetApp.openById(aipSheet);
+  const sheets = ss.getSheets();
+
+  // get the second last sheet
+  const sheet = sheets[sheets.length - 2];
+
+  const modelSheet = sheets[sheets.length - 1];
+  const model = modelSheet.getRange(modelSheet.getLastRow(), 1).getValue();
+  const users = Number(modelSheet.getRange(modelSheet.getLastRow(), 4).getValue());
+
+  const scenario = {};
+  for (let idx = 1; idx < sheet.getLastRow(); idx += 10) {
+    const scenarioName = sheet.getRange(idx, 1).getValue().toString().split('\n')[1];
+    const ttft = sheet.getRange(idx + 7, 3).getValue();
+    const target = sheet.getRange(idx + 7, 4).getValue().match(/(\d+s)/)[1];
+
+    scenario[scenarioName] = [ttft, target];
+  }
+
+  return {
+    model,
+    users,
+    scenario,
+  };
+}
+
 function doGet() {
   try {
     const ss = SpreadsheetApp.openById(bugsSheet);
     const sheet = ss.getSheets()[4];
 
     const bugs = getBugReport(sheet);
-    const performance = getPerformanceReport(sheet);
+    const performance = getLLMPerformanceReport(sheet);
+    const aip = getAIPReport();
 
     const data = {
       bugs,
       performance,
+      aip,
     };
 
     return ContentService

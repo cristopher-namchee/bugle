@@ -16,9 +16,18 @@ type BugsData = {
   external: BugReport;
 };
 
+type PerformanceData = [string, string, string, string];
+
+interface AIPData {
+  model: string;
+  users: number;
+  scenario: Record<string, [number, string]>;
+}
+
 interface Report {
   bugs: BugsData;
-  performance: [string, string, string, string];
+  performance: PerformanceData;
+  aip: AIPData;
 }
 
 interface SuccessResponse<T> {
