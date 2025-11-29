@@ -11,10 +11,9 @@ export async function sendWeeklyBugReport(env: Env) {
 
   const { bugs, performance } = weeklyStats.data;
 
-  // should be Saturday
   const today = new Date();
-  const prevSunday = new Date(today);
-  prevSunday.setDate(today.getDate() - 6);
+  const firstDate = new Date();
+  firstDate.setDate(1);
 
   const blocks = [
     {
@@ -29,7 +28,7 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `Month-to-Date (*${formatDate(prevSunday)}* until *${formatDate(today)}*)`,
+        text: `Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)`,
       },
     },
     {
