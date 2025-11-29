@@ -9,7 +9,7 @@ export async function sendWeeklyBugReport(env: Env) {
     return;
   }
 
-  const { bugs, performance } = weeklyStats.data;
+  const { bugs, performance, aip } = weeklyStats.data;
 
   const today = new Date();
   const firstDate = new Date();
@@ -96,7 +96,7 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `_${performance[0]}_\n        ${performance[1]}\n        ${performance[2]}\n        ${performance[3]}`,
+        text: `_${aip.model.split('/').pop()}, ${aip.users} Concurrent Users_\n${Object.entries(aip.scenario).reduce((acc, curr, idx) => `${acc}        Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`,
       },
     },
   ];
