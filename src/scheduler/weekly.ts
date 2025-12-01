@@ -20,7 +20,7 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'header',
       text: {
         type: 'plain_text',
-        text: '📊 GLChat Bug Reports',
+        text: '📊 GLChat Weekly Report',
         emoji: true,
       },
     },
