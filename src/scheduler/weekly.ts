@@ -1,3 +1,4 @@
+import { AIPModel } from '@/const';
 import { formatDate } from '@/lib/date';
 import { getReport } from '@/lib/sheet';
 
@@ -96,7 +97,7 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `_${aip.model.split('/').pop()}, ${aip.users} Concurrent Users_\n${Object.entries(aip.scenario).reduce((acc, curr, idx) => `${acc}        Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`,
+        text: `_${AIPModel}, ${aip.users} Concurrent Users_\n${Object.entries(aip.scenario).reduce((acc, curr, idx) => `${acc}        Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`,
       },
     },
   ];
