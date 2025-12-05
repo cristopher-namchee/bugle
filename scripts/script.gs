@@ -57,7 +57,7 @@ function getAIPReport() {
 function doGet() {
   try {
     const ss = SpreadsheetApp.openById(bugsSheet);
-    const sheet = ss.getSheets()[4];
+    const sheet = ss.getSheets()[5];
 
     const bugs = getBugReport(sheet);
     const performance = getLLMPerformanceReport(sheet);
