@@ -1,6 +1,8 @@
 const bugsSheet = '1ZGlbEKvVqaP4BL2a81sKSHaBJw11cYxkyKQpCPdPV7A';
 const aipSheet = '1cs1OThqveeEb0cQPOcjsZGwewc6nuFargQ9DPL0UmqE';
 
+const targetSheet = 'REPORT';
+
 function getBugReport(sheet) {
   const internalOpen = [
     sheet.getRange(5, 2).getValue(), sheet.getRange(6, 2).getValue(), sheet.getRange(7, 2).getValue(),
@@ -57,7 +59,7 @@ function getAIPReport() {
 function doGet() {
   try {
     const ss = SpreadsheetApp.openById(bugsSheet);
-    const sheet = ss.getSheets()[5];
+    const sheet = ss.getSheets().find(val => val.getName() === targetSheet);
 
     const bugs = getBugReport(sheet);
     const performance = getLLMPerformanceReport(sheet);
