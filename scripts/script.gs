@@ -85,7 +85,7 @@ function doGet() {
           <p><b>Bugle</b> failed to execute due to:</p>
 
           <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; padding: 10px 15px; border-radius: 6px; margin: 10px 0;">
-            <pre style="margin: 0; font-family: Consolas, monospace; white-space: pre-wrap;">${err.message}</pre>
+            <pre style="margin: 0; font-family: Consolas, monospace; white-space: pre-wrap;">${JSON.stringify(err, Object.getOwnPropertyNames(err))}</pre>
           </div>
 
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
