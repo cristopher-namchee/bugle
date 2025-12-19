@@ -77,10 +77,10 @@ function doGet() {
   } catch (err) {
     const self = Session.getActiveUser().getEmail();
 
-    GmailApp.sendEmail(self, '🚨 [Bugle] Failed to Execute Script', '', {
+    GmailApp.sendEmail(self, '❌ [Bugle] Failed to Execute Script', '', {
       htmlBody: `
         <div style="font-family: Helvetica, Arial, sans-serif; color: #333; line-height: 1.6;">
-          <h2>🚨 Failed to execute script</h2>
+          <h2>❌ Failed to execute script</h2>
 
           <p><b>Bugle</b> failed to execute due to:</p>
 
