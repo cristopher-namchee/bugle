@@ -1,34 +1,6 @@
 import type { Env } from '@/types';
 
-interface Employee {
-  name: string;
-  email: string;
-}
-
-interface BugReport {
-  open: [number, number, number];
-  closed: [number, number, number, number];
-}
-
-type ShiftData = [Employee, Employee, Employee, Employee, Employee];
-type BugsData = {
-  internal: BugReport;
-  external: BugReport;
-};
-
-type PerformanceData = [string, string, string, string];
-
-interface AIPData {
-  model: string;
-  users: number;
-  scenario: Record<string, [number, string]>;
-}
-
-interface Report {
-  bugs: BugsData;
-  performance: PerformanceData;
-  aip: AIPData;
-}
+/* General types */
 
 interface SuccessResponse<T> {
   status: 'success';
@@ -41,6 +13,46 @@ interface ErrorResponse {
 }
 
 type AppsScriptResponse<T = undefined> = SuccessResponse<T> | ErrorResponse;
+
+/* Weekly report types */
+
+export interface ResourceData<T> {
+  data: T | null;
+  error: string | null;
+}
+
+interface BugReport {
+  open: [number, number, number];
+  closed: [number, number, number, number];
+}
+
+export type Bugs = {
+  internal: BugReport;
+  external: BugReport;
+};
+
+export type Performance = [string, string, string, string];
+
+export interface AIP {
+  model: string;
+  users: number;
+  scenario: Record<string, [number, string]>;
+}
+
+interface Report {
+  bugs: ResourceData<Bugs>;
+  performance: ResourceData<Performance>;
+  aip: ResourceData<AIP>;
+}
+
+/* Daily bug report types */
+
+interface Employee {
+  name: string;
+  email: string;
+}
+
+type ShiftData = [Employee, Employee, Employee, Employee, Employee];
 
 export async function getSchedule(env: Env, date: Date) {
   const url = new URL(env.SHIFT_URL);
