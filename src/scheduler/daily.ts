@@ -139,259 +139,265 @@ export async function sendDailyBugReminder(env: Env) {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `There are *${bugsWithAssignees.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*:`,
+          text: `There are *${bugsWithAssignees.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugsWithAssignees.length > 0 ? ':' : '🎉'}}`,
         },
       },
-      {
-        type: 'table',
-        rows: [
-          [
+      ...(bugsWithAssignees.length > 0
+        ? [
             {
-              type: 'rich_text',
-              elements: [
-                {
-                  type: 'rich_text_section',
-                  elements: [
-                    {
-                      type: 'text',
-                      text: 'Issue #',
-                      style: { bold: true },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              type: 'rich_text',
-              elements: [
-                {
-                  type: 'rich_text_section',
-                  elements: [
-                    {
-                      type: 'text',
-                      text: 'Source',
-                      style: { bold: true },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              type: 'rich_text',
-              elements: [
-                {
-                  type: 'rich_text_section',
-                  elements: [
-                    {
-                      type: 'text',
-                      text: 'Title',
-                      style: { bold: true },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              type: 'rich_text',
-              elements: [
-                {
-                  type: 'rich_text_section',
-                  elements: [
-                    {
-                      type: 'text',
-                      text: 'Age',
-                      style: { bold: true },
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              type: 'rich_text',
-              elements: [
-                {
-                  type: 'rich_text_section',
-                  elements: [
-                    {
-                      type: 'text',
-                      text: 'Assignee(s)',
-                      style: { bold: true },
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-          ...bugsWithAssignees
-            .sort((a, b) => a.created_at.localeCompare(b.created_at))
-            .map((issue) => {
-              let source = IssueReporterMap[issue.reporter] ?? 'Manual Report';
-              let actualTitle = issue.title;
+              type: 'table',
+              rows: [
+                [
+                  {
+                    type: 'rich_text',
+                    elements: [
+                      {
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: 'Issue #',
+                            style: { bold: true },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  {
+                    type: 'rich_text',
+                    elements: [
+                      {
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: 'Source',
+                            style: { bold: true },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  {
+                    type: 'rich_text',
+                    elements: [
+                      {
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: 'Title',
+                            style: { bold: true },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  {
+                    type: 'rich_text',
+                    elements: [
+                      {
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: 'Age',
+                            style: { bold: true },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                  {
+                    type: 'rich_text',
+                    elements: [
+                      {
+                        type: 'rich_text_section',
+                        elements: [
+                          {
+                            type: 'text',
+                            text: 'Assignee(s)',
+                            style: { bold: true },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+                ...bugsWithAssignees
+                  .sort((a, b) => a.created_at.localeCompare(b.created_at))
+                  .map((issue) => {
+                    let source =
+                      IssueReporterMap[issue.reporter] ?? 'Manual Report';
+                    let actualTitle = issue.title;
 
-              const bracket = actualTitle.match(/^\[(.+?)\]/);
-              if (bracket) {
-                source = bracket[1].trim();
-                actualTitle = actualTitle.replace(bracket[1], '');
-              }
+                    const bracket = actualTitle.match(/^\[(.+?)\]/);
+                    if (bracket) {
+                      source = bracket[1].trim();
+                      actualTitle = actualTitle.replace(bracket[1], '');
+                    }
 
-              // It's possible to [source] - nonsense - title
-              const lastDash = issue.title.lastIndexOf('-');
+                    // It's possible to [source] - nonsense - title
+                    const lastDash = issue.title.lastIndexOf('-');
 
-              if (lastDash !== -1) {
-                actualTitle = issue.title.slice(lastDash + 2).trim();
-              }
+                    if (lastDash !== -1) {
+                      actualTitle = issue.title.slice(lastDash + 2).trim();
+                    }
 
-              const issueAge = Math.round(
-                (today.getTime() - new Date(issue.created_at ?? '').getTime()) /
-                  (1000 * 60 * 60 * 24),
-              );
+                    const issueAge = Math.round(
+                      (today.getTime() -
+                        new Date(issue.created_at ?? '').getTime()) /
+                        (1000 * 60 * 60 * 24),
+                    );
 
-              return [
-                {
-                  type: 'rich_text',
-                  elements: [
-                    {
-                      type: 'rich_text_section',
-                      elements: [
-                        {
-                          type: 'link',
-                          text: issue.number.toString(),
-                          url: issue.url,
-                        },
-                      ],
-                    },
-                  ],
-                },
-                {
-                  type: 'rich_text',
-                  elements: [
-                    {
-                      type: 'rich_text_section',
-                      elements: [
-                        {
-                          type: 'text',
-                          text: source,
-                        },
-                      ],
-                    },
-                  ],
-                },
-                {
-                  type: 'rich_text',
-                  elements: [
-                    {
-                      type: 'rich_text_section',
-                      elements: [
-                        {
-                          type: 'text',
-                          text:
-                            actualTitle.length > 56
-                              ? `${actualTitle.slice(0, 56)}...`
-                              : actualTitle,
-                        },
-                      ],
-                    },
-                  ],
-                },
-                {
-                  type: 'rich_text',
-                  elements: [
-                    {
-                      type: 'rich_text_section',
-                      elements: [
-                        {
-                          type: 'text',
-                          text: `${issueAge} day(s)`,
-                        },
-                      ],
-                    },
-                  ],
-                },
-                {
-                  type: 'rich_text',
-                  elements: [
-                    {
-                      type: 'rich_text_section',
-                      elements:
-                        issue.assignees.length === 0
-                          ? [
+                    return [
+                      {
+                        type: 'rich_text',
+                        elements: [
+                          {
+                            type: 'rich_text_section',
+                            elements: [
+                              {
+                                type: 'link',
+                                text: issue.number.toString(),
+                                url: issue.url,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        type: 'rich_text',
+                        elements: [
+                          {
+                            type: 'rich_text_section',
+                            elements: [
                               {
                                 type: 'text',
-                                text: '⚠️',
+                                text: source,
                               },
-                            ]
-                          : issue.assignees.map((assignee) => {
-                              if (assignee.found) {
-                                return {
-                                  type: 'user',
-                                  user_id: assignee.user,
-                                };
-                              }
-
-                              return {
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        type: 'rich_text',
+                        elements: [
+                          {
+                            type: 'rich_text_section',
+                            elements: [
+                              {
                                 type: 'text',
-                                text: assignee.user,
-                                style: {
-                                  code: true,
-                                },
-                              };
-                            }),
+                                text:
+                                  actualTitle.length > 56
+                                    ? `${actualTitle.slice(0, 56)}...`
+                                    : actualTitle,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        type: 'rich_text',
+                        elements: [
+                          {
+                            type: 'rich_text_section',
+                            elements: [
+                              {
+                                type: 'text',
+                                text: `${issueAge} day(s)`,
+                              },
+                            ],
+                          },
+                        ],
+                      },
+                      {
+                        type: 'rich_text',
+                        elements: [
+                          {
+                            type: 'rich_text_section',
+                            elements:
+                              issue.assignees.length === 0
+                                ? [
+                                    {
+                                      type: 'text',
+                                      text: '⚠️',
+                                    },
+                                  ]
+                                : issue.assignees.map((assignee) => {
+                                    if (assignee.found) {
+                                      return {
+                                        type: 'user',
+                                        user_id: assignee.user,
+                                      };
+                                    }
+
+                                    return {
+                                      type: 'text',
+                                      text: assignee.user,
+                                      style: {
+                                        code: true,
+                                      },
+                                    };
+                                  }),
+                          },
+                        ],
+                      },
+                    ];
+                  }),
+              ],
+            },
+            {
+              type: 'divider',
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `✅ *Things to do as an assignee:*`,
+              },
+            },
+            {
+              type: 'rich_text',
+              elements: [
+                {
+                  type: 'rich_text_list',
+                  style: 'bullet',
+                  indent: 0,
+                  elements: [
+                    {
+                      type: 'rich_text_section',
+                      elements: [
+                        {
+                          type: 'text',
+                          text: "Investigate the issue that you've been assigned to.",
+                        },
+                      ],
+                    },
+                    {
+                      type: 'rich_text_section',
+                      elements: [
+                        {
+                          type: 'text',
+                          text: 'Provide a status update in the issue page.',
+                        },
+                      ],
+                    },
+                    {
+                      type: 'rich_text_section',
+                      elements: [
+                        {
+                          type: 'text',
+                          text: "If you can't provide a status update to the issue, please state the reason in this thread.",
+                        },
+                      ],
                     },
                   ],
                 },
-              ];
-            }),
-        ],
-      },
-      {
-        type: 'divider',
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `✅ *Things to do as an assignee:*`,
-        },
-      },
-      {
-        type: 'rich_text',
-        elements: [
-          {
-            type: 'rich_text_list',
-            style: 'bullet',
-            indent: 0,
-            elements: [
-              {
-                type: 'rich_text_section',
-                elements: [
-                  {
-                    type: 'text',
-                    text: "Investigate the issue that you've been assigned to.",
-                  },
-                ],
-              },
-              {
-                type: 'rich_text_section',
-                elements: [
-                  {
-                    type: 'text',
-                    text: 'Provide a status update in the issue page.',
-                  },
-                ],
-              },
-              {
-                type: 'rich_text_section',
-                elements: [
-                  {
-                    type: 'text',
-                    text: "If you can't provide a status update to the issue, please state the reason in this thread.",
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
+              ],
+            },
+          ]
+        : []),
       {
         type: 'divider',
       },
