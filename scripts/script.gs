@@ -15,7 +15,7 @@ function getBugReport() {
     const sheet = ss.getSheets().find(val => val.getName() === targetSheet);
 
     if (!sheet) {
-      throw new Error(`Sheet ${targetSheet} not found in the spreadsheet.`)
+      throw new Error(`Sheet ${targetSheet} not found in the spreadsheet.`);
     }
 
     const internalOpen = [
@@ -57,7 +57,7 @@ function getLLMPerformanceReport() {
     const sheet = ss.getSheets().find(val => val.getName() === targetSheet);
 
     if (!sheet) {
-      throw new Error(`Sheet ${targetSheet} not found in the spreadsheet.`)
+      throw new Error(`Sheet ${targetSheet} not found in the spreadsheet.`);
     }
 
     const data = [
