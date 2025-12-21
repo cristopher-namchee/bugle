@@ -39,7 +39,7 @@ export interface AIP {
   scenario: Record<string, [number, string]>;
 }
 
-interface Report {
+interface WeeklyReport {
   bugs: ResourceData<Bugs>;
   performance: ResourceData<Performance>;
   aip: ResourceData<AIP>;
@@ -54,7 +54,10 @@ interface Employee {
 
 type ShiftData = [Employee, Employee, Employee, Employee, Employee];
 
-export async function getSchedule(env: Env, date: Date) {
+export async function getSchedule(
+  env: Env,
+  date: Date,
+): Promise<ShiftData | undefined> {
   const url = new URL(env.SHIFT_URL);
   const params = new URLSearchParams();
 
@@ -83,7 +86,7 @@ export async function getSchedule(env: Env, date: Date) {
   }
 }
 
-export async function getReport(env: Env) {
+export async function getReport(env: Env): Promise<WeeklyReport | undefined> {
   const url = new URL(env.SCRIPT_URL);
   const params = new URLSearchParams();
 
@@ -96,7 +99,7 @@ export async function getReport(env: Env) {
       throw new Error(`AppsScript returned ${response.status}`);
     }
 
-    const body = (await response.json()) as AppsScriptResponse<Report>;
+    const body = (await response.json()) as AppsScriptResponse<WeeklyReport>;
     if (body.status === 'failed') {
       throw new Error(body.message);
     }
