@@ -112,18 +112,11 @@ function createAIPReportBlock(data: ResourceData<AIP>) {
 }
 
 export async function sendWeeklyBugReport(env: Env) {
-  const weeklyStats = await getReport(env);
-  if (!weeklyStats) {
-    return;
-  }
-
-  const { bugs, performance, aip } = weeklyStats.data;
-
   const today = new Date();
   const firstDate = new Date();
   firstDate.setDate(1);
 
-  const blocks = [
+  const baseBlocks = [
     {
       type: 'header',
       text: {
@@ -139,50 +132,72 @@ export async function sendWeeklyBugReport(env: Env) {
         text: `Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)`,
       },
     },
-    {
-      type: 'divider',
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*Weekly Bug Report*`,
-      },
-    },
-    ...createBugReportBlocks(bugs),
-    {
-      type: 'divider',
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*GLChat Performance Report*`,
-      },
-    },
-    ...createPerformanceReportBlocks(performance),
-    {
-      type: 'divider',
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*GL AIP Performance Report*`,
-      },
-    },
-    ...createAIPReportBlock(aip),
   ];
 
-  await fetch('https://slack.com/api/chat.postMessage', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
-      'Content-Type': 'application/json',
+  let blocks: unknown[] = [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: '⚠️ Failed to fetch data from API. Please check the execution logs.',
+      },
     },
-    body: JSON.stringify({
-      channel: env.WEEKLY_SLACK_CHANNEL,
-      blocks,
-    }),
-  });
+  ];
+
+  try {
+    const weeklyStats = await getReport(env);
+
+    if (weeklyStats) {
+      const { bugs, performance, aip } = weeklyStats.data;
+
+      blocks = [
+        {
+          type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Weekly Bug Report*`,
+          },
+        },
+        ...createBugReportBlocks(bugs),
+        {
+          type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*GLChat Performance Report*`,
+          },
+        },
+        ...createPerformanceReportBlocks(performance),
+        {
+          type: 'divider',
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*GL AIP Performance Report*`,
+          },
+        },
+        ...createAIPReportBlock(aip),
+      ];
+    }
+  } catch {
+  } finally {
+    await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        channel: env.WEEKLY_SLACK_CHANNEL,
+        blocks: [...baseBlocks, ...blocks],
+      }),
+    });
+  }
 }
