@@ -1,34 +1,6 @@
 import type { Env } from '@/types';
 
-interface Employee {
-  name: string;
-  email: string;
-}
-
-interface BugReport {
-  open: [number, number, number];
-  closed: [number, number, number, number];
-}
-
-type ShiftData = [Employee, Employee, Employee, Employee, Employee];
-type BugsData = {
-  internal: BugReport;
-  external: BugReport;
-};
-
-type PerformanceData = [string, string, string, string];
-
-interface AIPData {
-  model: string;
-  users: number;
-  scenario: Record<string, [number, string]>;
-}
-
-interface Report {
-  bugs: BugsData;
-  performance: PerformanceData;
-  aip: AIPData;
-}
+/* General types */
 
 interface SuccessResponse<T> {
   status: 'success';
@@ -42,7 +14,50 @@ interface ErrorResponse {
 
 type AppsScriptResponse<T = undefined> = SuccessResponse<T> | ErrorResponse;
 
-export async function getSchedule(env: Env, date: Date) {
+/* Weekly report types */
+
+export interface ResourceData<T> {
+  data: T | null;
+  error: string | null;
+}
+
+interface BugReport {
+  open: [number, number, number];
+  closed: [number, number, number, number];
+}
+
+export type Bugs = {
+  internal: BugReport;
+  external: BugReport;
+};
+
+export type Performance = [string, string, string, string];
+
+export interface AIP {
+  model: string;
+  users: number;
+  scenario: Record<string, [number, string]>;
+}
+
+interface WeeklyReport {
+  bugs: ResourceData<Bugs>;
+  performance: ResourceData<Performance>;
+  aip: ResourceData<AIP>;
+}
+
+/* Daily bug report types */
+
+interface Employee {
+  name: string;
+  email: string;
+}
+
+type ShiftData = [Employee, Employee, Employee, Employee, Employee];
+
+export async function getSchedule(
+  env: Env,
+  date: Date,
+): Promise<ShiftData | undefined> {
   const url = new URL(env.SHIFT_URL);
   const params = new URLSearchParams();
 
@@ -71,7 +86,7 @@ export async function getSchedule(env: Env, date: Date) {
   }
 }
 
-export async function getReport(env: Env) {
+export async function getReport(env: Env): Promise<WeeklyReport | undefined> {
   const url = new URL(env.SCRIPT_URL);
   const params = new URLSearchParams();
 
@@ -84,7 +99,7 @@ export async function getReport(env: Env) {
       throw new Error(`AppsScript returned ${response.status}`);
     }
 
-    const body = (await response.json()) as AppsScriptResponse<Report>;
+    const body = (await response.json()) as AppsScriptResponse<WeeklyReport>;
     if (body.status === 'failed') {
       throw new Error(body.message);
     }
