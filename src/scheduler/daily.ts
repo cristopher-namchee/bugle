@@ -67,7 +67,7 @@ export async function sendDailyBugReminder(env: Env) {
 
     if (!bugsRequest.ok) {
       throw new Error(
-        `Failed to fetch bug list. Response returned ${bugsRequest.status}`,
+        `Failed to fetch bug list from GitHub. Response returned ${bugsRequest.status}`,
       );
     }
 
@@ -432,6 +432,8 @@ export async function sendDailyBugReminder(env: Env) {
         ],
       },
     ];
+  } catch (err) {
+    console.error(err);
   } finally {
     await fetch('https://slack.com/api/chat.postMessage', {
       method: 'POST',
