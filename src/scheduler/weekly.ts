@@ -148,7 +148,7 @@ export async function sendWeeklyBugReport(env: Env) {
     const weeklyStats = await getReport(env);
 
     if (weeklyStats) {
-      const { bugs, performance, aip } = weeklyStats.data;
+      const { bugs, performance, aip } = weeklyStats;
 
       blocks = [
         {
@@ -186,7 +186,8 @@ export async function sendWeeklyBugReport(env: Env) {
         ...createAIPReportBlock(aip),
       ];
     }
-  } catch {
+  } catch (err) {
+    console.error(err);
   } finally {
     await fetch('https://slack.com/api/chat.postMessage', {
       method: 'POST',
