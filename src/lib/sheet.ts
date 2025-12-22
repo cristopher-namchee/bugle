@@ -104,7 +104,7 @@ export async function getReport(env: Env): Promise<WeeklyReport | undefined> {
       throw new Error(body.message);
     }
 
-    return body;
+    return body.data;
   } catch (err) {
     console.error(
       'Failed to fetch weekly bug report due to the following error: ',
