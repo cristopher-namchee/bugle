@@ -422,9 +422,10 @@ export async function sendDailyBugReminder(env: Env) {
                   }
                 : {
                     type: 'text',
-                    text: pics[0].email,
+                    text: pics[0].name || 'Not set',
                     style: {
-                      code: true,
+                      code: !!pics[0].name,
+                      italic: !pics[0].name,
                     },
                   },
             ],

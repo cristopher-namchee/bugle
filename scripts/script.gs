@@ -119,7 +119,7 @@ function getAIPReport() {
 }
 
 function doGet() {
-  const self = Session.getActiveUser().getEmail();
+  const self = Session.getEffectiveUser().getEmail();
 
   try {
     const bugs = getBugReport();
