@@ -1,6 +1,14 @@
 const bugsSheet = '1ZGlbEKvVqaP4BL2a81sKSHaBJw11cYxkyKQpCPdPV7A';
 const aipSheet = '1cs1OThqveeEb0cQPOcjsZGwewc6nuFargQ9DPL0UmqE';
 
+const GeneralRecipients = [
+  'marcel.leonardo@gdplabs.id',
+  'livia.lukito@gdplabs.id',
+];
+const AIPRecipients = [
+  'petry.m.sianipar@gdplabs.id',
+];
+
 const targetSheet = 'REPORT';
 
 const errorKeyMap = {
@@ -133,7 +141,17 @@ function doGet() {
     };
 
     if (bugs.error || performance.error || aip.error) {
-      GmailApp.sendEmail(self, '⚠️ [Bugle] Partial Error', '', {
+      const recipients = [self];
+
+      if (bugs.error || performance.error) {
+        recipients.push(...GeneralRecipients);
+      }
+
+      if (aip.error) {
+        recipients.push(...AIPRecipients);
+      }
+
+      GmailApp.sendEmail(recipients.join(','), '⚠️ [Bugle] Partial Error', '', {
         htmlBody: `
         <div style="font-family: Helvetica, Arial, sans-serif; color: #333; line-height: 1.6;">
           <h2>⚠️ Bugle Encountered Errors</h2>
@@ -141,16 +159,16 @@ function doGet() {
           <p><b>Bugle</b> has encountered several error(s):</p>
 
           ${Object.entries(data).map(([key, value]) => {
-            if (!value.error) {
-              return '';
-            }
+          if (!value.error) {
+            return '';
+          }
 
-            return `<h3>${errorKeyMap[key]}</h3>
+          return `<h3>${errorKeyMap[key]}</h3>
 
             <div style="background-color: #f8d7da; border: 1px solid #f5c2c7; padding: 10px 15px; border-radius: 6px; margin: 10px 0;">
               <pre style="margin: 0; font-family: Consolas, monospace; white-space: pre-wrap;">${JSON.stringify(value.error, Object.getOwnPropertyNames(value.error), 2)}</pre>
             </div>`;
-          }).join(' ')}
+        }).join(' ')}
 
           <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
 
@@ -158,6 +176,8 @@ function doGet() {
             This is an automated message from <b>Bugle</b>.
           </p>
         </div>`,
+        name: 'Bugle',
+        replyTo: 'cristopher@gdplabs.id',
       });
     }
 
@@ -182,6 +202,8 @@ function doGet() {
             This is an automated message from <b>Bugle</b>.
           </p>
         </div>`,
+      name: 'Bugle',
+      replyTo: 'cristopher@gdplabs.id',
     });
 
     return ContentService
