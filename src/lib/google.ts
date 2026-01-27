@@ -13,19 +13,23 @@ import type { GoogleServiceAccount } from '@/types';
 export async function getGoogleAuthToken(
   serviceAccount: GoogleServiceAccount,
 ): Promise<string> {
-  const auth = new GoogleAuth({
-    credentials: serviceAccount,
-    scopes: JWT.Scopes,
-  });
+  try {
+    const auth = new GoogleAuth({
+      credentials: serviceAccount,
+      scopes: JWT.Scopes,
+    });
 
-  const client = await auth.getClient();
-  const { token } = await client.getAccessToken();
+    const client = await auth.getClient();
+    const { token } = await client.getAccessToken();
 
-  if (!token) {
-    console.error('Failed to get access token from Google Auth');
+    if (!token) {
+      throw new Error('Access token is empty. Maybe bad credentials?');
+    }
+
+    return token;
+  } catch (err) {
+    console.error('Failed to get Google access token:', err);
 
     return '';
   }
-
-  return token;
 }
