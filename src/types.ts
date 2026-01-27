@@ -27,3 +27,9 @@ export interface GithubIssue {
     nodeid: number;
   }[];
 }
+
+export interface GoogleServiceAccount {
+  private_key: string;
+  client_email: string;
+  token_uri: string;
+}
