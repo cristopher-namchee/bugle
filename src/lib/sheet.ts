@@ -57,7 +57,7 @@ type ShiftData = [Employee, Employee, Employee, Employee, Employee];
 export async function getSchedule(
   env: Env,
   date: Date,
-): Promise<ShiftData | undefined> {
+): Promise<ShiftData | null> {
   const url = new URL(env.SHIFT_URL);
   const params = new URLSearchParams();
 
@@ -83,10 +83,12 @@ export async function getSchedule(
     return body.data;
   } catch (err) {
     console.error('Failed to fetch schedule due to the following error: ', err);
+
+    return null;
   }
 }
 
-export async function getReport(env: Env): Promise<WeeklyReport | undefined> {
+export async function getReport(env: Env): Promise<WeeklyReport | null> {
   const url = new URL(env.SCRIPT_URL);
   const params = new URLSearchParams();
 
@@ -110,5 +112,7 @@ export async function getReport(env: Env): Promise<WeeklyReport | undefined> {
       'Failed to fetch weekly bug report due to the following error: ',
       err,
     );
+
+    return null;
   }
 }

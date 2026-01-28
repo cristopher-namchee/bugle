@@ -15,8 +15,6 @@ export interface Bug {
   url: string;
   created_at: string;
   reporter: string;
-  assignees: {
-    found: boolean;
-    user: string;
-  }[];
+  // array of e-mails
+  assignees: string[];
 }

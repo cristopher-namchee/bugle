@@ -1,5 +1,6 @@
 import { AIPModel } from '@/const';
 import { formatDate } from '@/lib/date';
+import { getGoogleAuthToken } from '@/lib/google';
 
 import {
   type AIP,
@@ -112,16 +113,43 @@ function createAIPReportBlock(data: ResourceData<AIP>) {
 }
 
 export async function sendWeeklyBugReport(env: Env) {
+  const token = await getGoogleAuthToken(env.SERVICE_ACCOUNT_EMAIL, env.SERVICE_ACCOUNT_PRIVATE_KEY);
+  if (!token) {
+    return;
+  }
+
   const today = new Date();
   const firstDate = new Date();
   firstDate.setDate(1);
+
+  const weeklyStats = await getReport(env);
+
+  if (!weeklyStats) {
+    return fetch(
+      `https://chat.googleapis.com/v1/${env.DAILY_GOOGLE_SPACE}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formattedText: `*📊 GLChat Weekly Report*
+
+Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)
+
+⚠️ _Failed to fetch data from API. Please check the execution logs_.`.
+        }),
+      },
+    );
+  }
 
   const baseBlocks = [
     {
       type: 'header',
       text: {
         type: 'plain_text',
-        text: '📊 GLChat Weekly Report',
+        text: '',
         emoji: true,
       },
     },
@@ -129,7 +157,7 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)`,
+        text: ``,
       },
     },
   ];
@@ -139,53 +167,52 @@ export async function sendWeeklyBugReport(env: Env) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: '⚠️ Failed to fetch data from API. Please check the execution logs.',
+        text: '',
       },
     },
   ];
 
+  if (weeklyStats) {
+    const { bugs, performance, aip } = weeklyStats;
+
+    blocks = [
+      {
+        type: 'divider',
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Weekly Bug Report*`,
+        },
+      },
+      ...createBugReportBlocks(bugs),
+      {
+        type: 'divider',
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*GLChat Performance Report*`,
+        },
+      },
+      ...createPerformanceReportBlocks(performance),
+      {
+        type: 'divider',
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*GL AIP Performance Report*`,
+        },
+      },
+      ...createAIPReportBlock(aip),
+    ];
+  }
+
   try {
-    const weeklyStats = await getReport(env);
-
-    if (weeklyStats) {
-      const { bugs, performance, aip } = weeklyStats;
-
-      blocks = [
-        {
-          type: 'divider',
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Weekly Bug Report*`,
-          },
-        },
-        ...createBugReportBlocks(bugs),
-        {
-          type: 'divider',
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*GLChat Performance Report*`,
-          },
-        },
-        ...createPerformanceReportBlocks(performance),
-        {
-          type: 'divider',
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*GL AIP Performance Report*`,
-          },
-        },
-        ...createAIPReportBlock(aip),
-      ];
-    }
   } catch (err) {
     console.error(err);
   } finally {

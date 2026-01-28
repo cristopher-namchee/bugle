@@ -147,19 +147,16 @@ describe('getGoogleUserID', () => {
 
   it('should return an empty string when the email is empty', async () => {
     mockServer.use(
-      http.get(
-        'https://people.googleapis.com/v1/people:searchDirectoryPeople',
-        () => {
-          return HttpResponse.json({
-            people: [{ metadata: { sources: [{ id: 'should_not_get' }] } }],
-          });
-        },
-      ),
+      http.get('https://chat.googleapis.com/v1/spaces/123/members/', () => {
+        return HttpResponse.json({
+          name: 'should_not_get',
+        });
+      }),
     );
 
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const result = await getUserIdByEmail('', 'token');
+    const result = await getUserIdByEmail('', '123', 'token');
 
     expect(result).toBe('');
     expect(spy).not.toHaveBeenCalled();
@@ -168,7 +165,7 @@ describe('getGoogleUserID', () => {
   it('should return an empty string if People API returned non-200', async () => {
     mockServer.use(
       http.get(
-        'https://people.googleapis.com/v1/people:searchDirectoryPeople',
+        'https://chat.googleapis.com/v1/spaces/123/members/example@domain.com',
         () => {
           return HttpResponse.json({}, { status: 400 });
         },
@@ -177,39 +174,19 @@ describe('getGoogleUserID', () => {
 
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const result = await getUserIdByEmail('example@domain.com', 'token');
+    const result = await getUserIdByEmail('example@domain.com', '123', 'token');
 
     expect(result).toBe('');
     expect(spy).toHaveBeenCalledOnce();
   });
 
-  it('should return an empty string if the user is not found', async () => {
-    mockServer.use(
-      http.get(
-        'https://people.googleapis.com/v1/people:searchDirectoryPeople',
-        () => {
-          return HttpResponse.json({
-            people: [],
-          });
-        },
-      ),
-    );
-
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    const result = await getUserIdByEmail('example@domain.com', 'token');
-
-    expect(result).toBe('');
-    expect(spy).not.toHaveBeenCalled();
-  });
-
   it('should return formatted user ID when the user is found', async () => {
     mockServer.use(
       http.get(
-        'https://people.googleapis.com/v1/people:searchDirectoryPeople',
+        'https://chat.googleapis.com/v1/spaces/123/members/example@domain.com',
         () => {
           return HttpResponse.json({
-            people: [{ metadata: { sources: [{ id: '1234' }] } }],
+            name: 'spaces/1234/users/1234',
           });
         },
       ),
@@ -217,7 +194,7 @@ describe('getGoogleUserID', () => {
 
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    const result = await getUserIdByEmail('example@domain.com', 'token');
+    const result = await getUserIdByEmail('example@domain.com', '123', 'token');
 
     expect(result).toBe('users/1234');
     expect(spy).not.toHaveBeenCalled();

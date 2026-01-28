@@ -4,14 +4,8 @@ interface GoogleAuthResponse {
   access_token: string;
 }
 
-interface GooglePeopleAPIResponse {
-  people: {
-    metadata: {
-      sources: {
-        id: string;
-      }[];
-    };
-  }[];
+interface GoogleUserAPIResponse {
+  name: string;
 }
 
 function b64(input: ArrayBuffer | string) {
@@ -118,17 +112,17 @@ export async function getGoogleAuthToken(
 }
 
 /**
- * Get Google Space user ID by email
- *
- * TODO: refactor, so we don't supply token.
+ * Get Google Space user ID by email.
  *
  * @param {string} email User e-mail
+ * @param {string} space Google space ID
  * @param {string} token Google access token that contains People API scopes
  * @returns {Promise<string>} Resolves into a string. If the user is not found, it will
  * resolve into an empty string.
  */
 export async function getUserIdByEmail(
   email: string,
+  space: string,
   token: string,
 ): Promise<string> {
   try {
@@ -136,13 +130,10 @@ export async function getUserIdByEmail(
       return '';
     }
 
-    const params = new URLSearchParams({
-      query: email,
-      readMask: 'metadata', // We only need the ID, which is in metadata
-      sources: 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE',
-    });
-
-    const url = `https://people.googleapis.com/v1/people:searchDirectoryPeople?${params.toString()}`;
+    const url = new URL(
+      `/v1/spaces/${space}/members/${email}`,
+      'https://chat.googleapis.com',
+    );
 
     const response = await fetch(url, {
       method: 'GET',
@@ -153,21 +144,17 @@ export async function getUserIdByEmail(
     });
 
     if (!response.ok) {
-      const body = await response.json();
-
-      console.log(JSON.stringify(body, null, 2));
-
       throw new Error(`Response returned ${response.status}`);
     }
 
-    const data = (await response.json()) as GooglePeopleAPIResponse;
-
-    if (data.people && data.people.length > 0) {
-      const internalId = data.people[0].metadata.sources[0].id;
-      return `users/${internalId}`;
+    const data = (await response.json()) as GoogleUserAPIResponse;
+    if (!data.name) {
+      return '';
     }
 
-    return '';
+    const [_space, _spaceId, _member, id] = data.name.split('/');
+
+    return `users/${id}`;
   } catch (err) {
     console.error('Failed to get Google user ID:', err);
 

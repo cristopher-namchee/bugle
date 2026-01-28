@@ -1,6 +1,6 @@
 import { GLChatMetadata } from '@/const';
+
 import type { Bug } from '@/types';
-import { getUserIdByEmail } from './google';
 
 interface GithubUser {
   login: string;
@@ -29,13 +29,11 @@ interface GithubIssue {
  * An issue is classified as a bug when it has `bug` label on them (case-sensitive).
  *
  * @param {string} githubToken GitHub access token
- * @param {string} googleToken Google API access token that can access People API
  * @returns {Promise<Bug[]>} Resolves into a list of bugs. Will return empty
  * array if GitHub API call failed.
  */
 export async function getCurrentlyActiveBugs(
   githubToken: string,
-  googleToken: string,
 ): Promise<Bug[]> {
   const params = new URLSearchParams();
   params.append('labels', 'bug');
@@ -99,24 +97,15 @@ export async function getCurrentlyActiveBugs(
         }),
       );
 
-      const assignees = await Promise.all(
-        assigneeData.map(async ({ login, email }) => {
-          if (!email) {
-            return { found: false, user: login };
-          }
-
-          const googleUser = await getUserIdByEmail(email, googleToken);
-          return { found: !!googleUser, user: googleUser || login };
-        }),
-      );
-
       return {
         title: issue.title,
         number: issue.number,
         reporter: issue.user.login,
         url: issue.html_url,
         created_at: issue.created_at,
-        assignees,
+        assignees: assigneeData
+          .map((assignee) => assignee.email ?? assignee.login)
+          .filter(Boolean),
       };
     }),
   );
