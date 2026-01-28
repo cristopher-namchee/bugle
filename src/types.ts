@@ -33,3 +33,7 @@ export interface GoogleServiceAccount {
   client_email: string;
   token_uri: string;
 }
+
+export interface GoogleAuthResponse {
+  access_token: string;
+}

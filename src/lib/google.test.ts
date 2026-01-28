@@ -1,73 +1,114 @@
-import { GoogleAuth } from 'google-auth-library';
+import { HttpResponse, http } from 'msw';
+import { setupServer } from 'msw/node';
 
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { getGoogleAuthToken } from '@/lib/google';
-import type { GoogleServiceAccount } from '@/types';
 
-vi.mock('google-auth-library', async (original) => {
-  const originalPackage =
-    await original<typeof import('google-auth-library')>();
+const mockServer = setupServer();
 
-  const GoogleAuth = vi.fn(
-    class {
-      getClient = vi.fn().mockImplementation(() => ({
-        getAccessToken: vi.fn(),
-      }));
-    },
-  );
+function arrayBufferToPem(buffer: ArrayBuffer) {
+  const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
 
-  return { ...originalPackage, GoogleAuth };
-});
+  const lines = base64.match(/.{1,64}/g)?.join('\n');
+
+  return `-----BEGIN PRIVATE KEY-----\n${lines}\n-----END PRIVATE KEY-----`;
+}
 
 describe('getGoogleAuthToken', () => {
-  const mockServiceAccount: GoogleServiceAccount = {
+  const mockServiceAccount = {
     client_email: 'test@test.iam.gserviceaccount.com',
-    private_key:
-      '-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----\n',
-    token_uri: 'https://oauth2.googleapi.com',
+    private_key: '',
   };
 
-  beforeAll(() => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+  beforeAll(async () => {
+    mockServer.listen();
+
+    // mocking private key
+    const keyPair = (await crypto.subtle.generateKey(
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]), // 65537
+        hash: 'SHA-512',
+      },
+      true,
+      ['sign', 'verify'],
+    )) as CryptoKeyPair;
+
+    const pkcs8 = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
+    const privateKeyPem = arrayBufferToPem(pkcs8 as ArrayBuffer);
+
+    mockServiceAccount.private_key = privateKeyPem;
   });
 
   afterEach(() => {
+    mockServer.resetHandlers();
     vi.resetAllMocks();
   });
 
+  afterAll(() => {
+    mockServer.close();
+  });
+
   it('should resolve into empty string due to connection error', async () => {
-    const spy = vi.mocked(GoogleAuth).mockImplementationOnce(
-      class {
-        getClient = vi.fn().mockResolvedValue({
-          getAccessToken: vi.fn().mockResolvedValue({
-            token: null,
-          }),
-        });
-      } as unknown as typeof GoogleAuth,
+    mockServer.use(
+      http.post('https://oauth2.googleapis.com/token', async () => {
+        throw new Error('Connection error');
+      }),
     );
 
-    const consoleSpy = vi.spyOn(console, 'error');
-    const result = await getGoogleAuthToken(mockServiceAccount);
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getGoogleAuthToken(
+      mockServiceAccount.client_email,
+      mockServiceAccount.private_key,
+    );
 
     expect(result).toBe('');
     expect(spy).toHaveBeenCalledOnce();
-    expect(consoleSpy).toHaveBeenCalledOnce();
+  });
+
+  it('should resolve into empty string when access token is empty', async () => {
+    mockServer.use(
+      http.post('https://oauth2.googleapis.com/token', async () => {
+        return HttpResponse.json({ });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getGoogleAuthToken(
+      mockServiceAccount.client_email,
+      mockServiceAccount.private_key,
+    );
+
+    expect(result).toBe('');
+    expect(spy).toHaveBeenCalledOnce();
   });
 
   it('should resolve into an access token', async () => {
-    const spy = vi.mocked(GoogleAuth).mockImplementationOnce(
-      class {
-        getClient = vi.fn().mockResolvedValue({
-          getAccessToken: vi.fn().mockResolvedValue({
-            token: 'token',
-          }),
-        });
-      } as unknown as typeof GoogleAuth,
+    mockServer.use(
+      http.post('https://oauth2.googleapis.com/token', async () => {
+        return HttpResponse.json({ access_token: 'token' });
+      }),
     );
 
-    const result = await getGoogleAuthToken(mockServiceAccount);
+    const spy = vi.spyOn(console, 'error');
+
+    const result = await getGoogleAuthToken(
+      mockServiceAccount.client_email,
+      mockServiceAccount.private_key,
+    );
 
     expect(result).toBe('token');
-    expect(spy).toHaveBeenCalledOnce();
+    expect(spy).not.toHaveBeenCalled();
   });
 });
