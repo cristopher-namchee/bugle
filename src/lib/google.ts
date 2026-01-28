@@ -132,7 +132,6 @@ export async function getUserIdByEmail(
 
     const url = `https://people.googleapis.com/v1/people:searchDirectoryPeople?${params.toString()}`;
 
-    // 2. Fetch from People API
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -140,6 +139,10 @@ export async function getUserIdByEmail(
         'Content-Type': 'application/json',
       },
     });
+
+    if (!response.ok) {
+      throw new Error(`Response returned ${response.status}`);
+    }
 
     const data = await response.json() as GooglePeopleAPIResponse;
 
