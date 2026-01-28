@@ -1,6 +1,6 @@
 import { JWT } from '@/const';
 
-import type { GoogleAuthResponse } from '@/types';
+import type { GoogleAuthResponse, GooglePeopleAPIResponse } from '@/types';
 
 function b64(input: ArrayBuffer | string) {
   const bytes =
@@ -100,6 +100,57 @@ export async function getGoogleAuthToken(
     return body.access_token;
   } catch (err) {
     console.error('Failed to get access token from Google:', err);
+
+    return '';
+  }
+}
+
+/**
+ * Get Google Space user ID by email
+ *
+ * TODO: refactor, so we don't supply token.
+ *
+ * @param {string} email User e-mail
+ * @param {string} token Google access token that contains People API scopes
+ * @returns {Promise<string>} Resolves into a string. If the user is not found, it will
+ * resolve into an empty string.
+ */
+export async function getUserIdByEmail(
+  email: string,
+  token: string,
+): Promise<string> {
+  try {
+    if (!email) {
+      return '';
+    }
+
+    const params = new URLSearchParams({
+      query: email,
+      readMask: 'metadata', // We only need the ID, which is in metadata
+      sources: 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE',
+    });
+
+    const url = `https://people.googleapis.com/v1/people:searchDirectoryPeople?${params.toString()}`;
+
+    // 2. Fetch from People API
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json() as GooglePeopleAPIResponse;
+
+    if (data.people && data.people.length > 0) {
+      const internalId = data.people[0].metadata.sources[0].id;
+      return `users/${internalId}`;
+    }
+
+    return '';
+  } catch (err) {
+    console.error('Failed to get Google user ID:', err);
 
     return '';
   }

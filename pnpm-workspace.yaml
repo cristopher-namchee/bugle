@@ -3,3 +3,6 @@ onlyBuiltDependencies:
   - msw
   - sharp
   - workerd
+
+packages:
+  - .

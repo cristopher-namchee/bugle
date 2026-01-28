@@ -37,3 +37,13 @@ export interface GoogleServiceAccount {
 export interface GoogleAuthResponse {
   access_token: string;
 }
+
+export interface GooglePeopleAPIResponse {
+  people: {
+    metadata: {
+      sources: {
+        id: string;
+      }[];
+    }
+  }[];
+};

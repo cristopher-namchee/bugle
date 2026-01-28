@@ -79,7 +79,7 @@ describe('getGoogleAuthToken', () => {
   it('should resolve into empty string when access token is empty', async () => {
     mockServer.use(
       http.post('https://oauth2.googleapis.com/token', async () => {
-        return HttpResponse.json({ });
+        return HttpResponse.json({});
       }),
     );
 
@@ -110,5 +110,20 @@ describe('getGoogleAuthToken', () => {
 
     expect(result).toBe('token');
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('getGoogleUserID', () => {
+  beforeAll(async () => {
+    mockServer.listen();
+  });
+
+  afterEach(() => {
+    mockServer.resetHandlers();
+    vi.resetAllMocks();
+  });
+
+  afterAll(() => {
+    mockServer.close();
   });
 });
