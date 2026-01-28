@@ -1,6 +1,18 @@
 import { JWT } from '@/const';
 
-import type { GoogleAuthResponse, GooglePeopleAPIResponse } from '@/types';
+interface GoogleAuthResponse {
+  access_token: string;
+}
+
+interface GooglePeopleAPIResponse {
+  people: {
+    metadata: {
+      sources: {
+        id: string;
+      }[];
+    };
+  }[];
+}
 
 function b64(input: ArrayBuffer | string) {
   const bytes =
@@ -63,7 +75,7 @@ export async function getGoogleAuthToken(
     const key = await crypto.subtle.importKey(
       'pkcs8',
       pemToArrayBuffer(pem),
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-512' },
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
       false,
       ['sign'],
     );
@@ -141,10 +153,14 @@ export async function getUserIdByEmail(
     });
 
     if (!response.ok) {
+      const body = await response.json();
+
+      console.log(JSON.stringify(body, null, 2));
+
       throw new Error(`Response returned ${response.status}`);
     }
 
-    const data = await response.json() as GooglePeopleAPIResponse;
+    const data = (await response.json()) as GooglePeopleAPIResponse;
 
     if (data.people && data.people.length > 0) {
       const internalId = data.people[0].metadata.sources[0].id;

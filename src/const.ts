@@ -14,3 +14,8 @@ export const JWT = {
   Algorithm: 'RS256',
   Grant: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
 };
+
+export const GLChatMetadata = {
+  owner: 'GDP-ADMIN',
+  repo: 'glchat',
+};

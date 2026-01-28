@@ -37,7 +37,7 @@ describe('getGoogleAuthToken', () => {
         name: 'RSASSA-PKCS1-v1_5',
         modulusLength: 2048,
         publicExponent: new Uint8Array([1, 0, 1]), // 65537
-        hash: 'SHA-512',
+        hash: 'SHA-256',
       },
       true,
       ['sign', 'verify'],

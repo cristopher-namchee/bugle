@@ -1,15 +1,11 @@
-import { IssueReporter } from '@/const';
+import { GLChatMetadata, IssueReporter } from '@/const';
 import { formatDate } from '@/lib/date';
+import { getCurrentlyActiveBugs } from '@/lib/github';
 import { getGoogleAuthToken, getUserIdByEmail } from '@/lib/google';
 
 import { getSchedule } from '@/lib/sheet';
 
-import type { Env, GithubIssue, GithubUser } from '@/types';
-
-const GLChatMetadata = {
-  owner: 'GDP-ADMIN',
-  repo: 'glchat',
-};
+import type { Env } from '@/types';
 
 const IssueReporterMap = {
   [IssueReporter.Form]: 'Feedback Form',
@@ -17,16 +13,16 @@ const IssueReporterMap = {
 };
 
 export async function sendDailyBugReminder(env: Env) {
-  const token = await getGoogleAuthToken(
+  const googleToken = await getGoogleAuthToken(
     env.SERVICE_ACCOUNT_EMAIL,
     env.SERVICE_ACCOUNT_PRIVATE_KEY,
   );
-  if (!token) {
+  if (!googleToken) {
     return;
   }
 
   let text = `*🐛 GLChat Active Bug List*
-          
+
 ⚠️ _Failed to process daily bug report. Please check the execution log._`;
   const cards: Record<string, unknown>[] = [];
 
@@ -38,92 +34,12 @@ export async function sendDailyBugReminder(env: Env) {
       throw new Error('Schedule data is empty');
     }
 
-    const dailyBugPic = await getUserIdByEmail(pics[0].email, token);
-
-    const params = new URLSearchParams();
-    params.append('labels', 'bug');
-    params.append('state', 'open');
-
-    const url = new URL(
-      `/repos/${GLChatMetadata.owner}/${GLChatMetadata.repo}/issues`,
-      'https://api.github.com',
-    );
-    url.search = params.toString();
-
-    const bugsRequest = await fetch(url, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-        'User-Agent': 'bugle',
-      },
-    });
-
-    if (!bugsRequest.ok) {
-      throw new Error(
-        `Failed to fetch bug list from GitHub. Response returned ${bugsRequest.status}`,
-      );
-    }
-
-    const bugs = (await bugsRequest.json()) as GithubIssue[];
-    const bugsWithAssignees = await Promise.all(
-      bugs.map(async (issue) => {
-        const users = issue.assignees;
-
-        if (!users?.length) {
-          return {
-            title: issue.title,
-            number: issue.number,
-            url: issue.html_url,
-            created_at: issue.created_at,
-            reporter: issue.user.login,
-            assignees: [],
-          };
-        }
-
-        const assigneeData = await Promise.all(
-          users.map(async (user) => {
-            const userResponse = await fetch(user.url, {
-              headers: {
-                Accept: 'application/vnd.github+json',
-                Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-                'X-GitHub-Api-Version': '2022-11-28',
-                'User-Agent': 'bugle',
-              },
-            });
-
-            const userData = (await userResponse.json()) as GithubUser;
-
-            return userData;
-          }),
-        );
-
-        const assignees = await Promise.all(
-          assigneeData.map(async ({ login, email }) => {
-            if (!email) {
-              return { found: false, user: login };
-            }
-
-            const googleUser = await getUserIdByEmail(email, token);
-            return { found: !!googleUser, user: googleUser ?? login };
-          }),
-        );
-
-        return {
-          title: issue.title,
-          number: issue.number,
-          reporter: issue.user.login,
-          url: issue.html_url,
-          created_at: issue.created_at,
-          assignees,
-        };
-      }),
-    );
+    const dailyBugPic = await getUserIdByEmail(pics[0].email, googleToken);
+    const bugs = await getCurrentlyActiveBugs(env.GITHUB_TOKEN, googleToken);
 
     text = `*🐛 GLChat Active Bug List*
-    
-There are *${bugsWithAssignees.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugsWithAssignees.length > 0 ? ':' : '🎉'}}.
+
+There are *${bugs.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugs.length > 0 ? ':' : '🎉'}}.
 
 ✅ *Things to do as an assignee:*
 
@@ -136,7 +52,7 @@ There are *${bugsWithAssignees.length}* of <https://github.com/GDP-ADMIN/glchat/
 <${dailyBugPic}>`;
 
     cards.push(
-      ...bugsWithAssignees
+      ...bugs
         .sort((a, b) => a.created_at.localeCompare(b.created_at))
         .map((issue) => {
           let source = IssueReporterMap[issue.reporter] ?? 'Manual Report';
@@ -228,7 +144,7 @@ There are *${bugsWithAssignees.length}* of <https://github.com/GDP-ADMIN/glchat/
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${googleToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
