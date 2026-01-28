@@ -117,15 +117,22 @@ function constructInternalWeeklyBugReport(data: ResourceData<Bugs>) {
   const { data: bugs } = data;
 
   if (!bugs) {
-    return [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: '⚠️ _Failed to fetch weekly bug report. Please check the execution log._',
+    return {
+      cardId: `card-bug-report-internal`,
+      card: {
+        header: {
+          title: 'Bugs From Internal Report',
+          subtitle: 'Weekly Bug Report',
         },
+        sections: [
+          {
+            textParagraph: {
+              text: '⚠️ _Failed to fetch weekly bug report. Please check the execution log._',
+            },
+          },
+        ],
       },
-    ];
+    };
   }
 
   return {
@@ -142,7 +149,171 @@ function constructInternalWeeklyBugReport(data: ResourceData<Bugs>) {
             {
               decoratedText: {
                 topLabel: 'Total Opened',
-                text: bugs.internal.open.reduce((acc, curr) => acc + curr, 0),
+                text: `${bugs.internal.open.reduce(
+                  (acc, curr) => acc + curr,
+                  0,
+                )} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P0',
+                text: `${bugs.internal.open[0]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P1',
+                text: `${bugs.internal.open[1]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P2',
+                text: `${bugs.internal.open[2]} bug(s)`,
+              },
+            },
+          ],
+        },
+        {
+          collapsible: true,
+          widgets: [
+            {
+              decoratedText: {
+                topLabel: 'Total Closed',
+                text: `${bugs.internal.closed.reduce(
+                  (acc, curr) => acc + curr,
+                  0,
+                )} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P0',
+                text: `${bugs.internal.closed[0]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P1',
+                text: `${bugs.internal.closed[1]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P2',
+                text: `${bugs.internal.closed[2]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'Closed as Enhancements',
+                text: `${bugs.internal.closed[3]} bug(s)`,
+              },
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+function constructExternalWeeklyBugReport(data: ResourceData<Bugs>) {
+  const { data: bugs } = data;
+
+  if (!bugs) {
+    return {
+      cardId: `card-bug-report-external`,
+      card: {
+        header: {
+          title: 'Bugs From External Report',
+          subtitle: 'Weekly Bug Report',
+        },
+        sections: [
+          {
+            textParagraph: {
+              text: '⚠️ _Failed to fetch weekly bug report. Please check the execution log._',
+            },
+          },
+        ],
+      },
+    };
+  }
+
+  return {
+    cardId: `card-bug-report-external`,
+    card: {
+      header: {
+        title: 'Bugs From External Report',
+        subtitle: 'Weekly Bug Report',
+      },
+      sections: [
+        {
+          collapsible: true,
+          widgets: [
+            {
+              decoratedText: {
+                topLabel: 'Total Opened',
+                text: `${bugs.external.open.reduce(
+                  (acc, curr) => acc + curr,
+                  0,
+                )} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P0',
+                text: `${bugs.external.open[0]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P1',
+                text: `${bugs.external.open[1]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P2',
+                text: `${bugs.external.open[2]} bug(s)`,
+              },
+            },
+          ],
+        },
+        {
+          collapsible: true,
+          widgets: [
+            {
+              decoratedText: {
+                topLabel: 'Total Closed',
+                text: `${bugs.external.closed.reduce(
+                  (acc, curr) => acc + curr,
+                  0,
+                )} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P0',
+                text: `${bugs.external.closed[0]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P1',
+                text: `${bugs.external.closed[1]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'P2',
+                text: `${bugs.external.closed[2]} bug(s)`,
+              },
+            },
+            {
+              decoratedText: {
+                topLabel: 'Closed as Enhancements',
+                text: `${bugs.external.closed[3]} bug(s)`,
               },
             },
           ],
@@ -169,7 +340,7 @@ export async function sendWeeklyBugReport(env: Env) {
 
   if (!weeklyStats) {
     return fetch(
-      `https://chat.googleapis.com/v1/${env.DAILY_GOOGLE_SPACE}/messages`,
+      `https://chat.googleapis.com/v1/spaces/${env.WEEKLY_GOOGLE_SPACE}/messages`,
       {
         method: 'POST',
         headers: {
@@ -189,8 +360,8 @@ Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${forma
 
   const { bugs, performance, aip } = weeklyStats;
 
-  await fetch(
-    `https://chat.googleapis.com/v1/${env.DAILY_GOOGLE_SPACE}/messages`,
+  const foo = await fetch(
+    `https://chat.googleapis.com/v1/spaces/${env.WEEKLY_GOOGLE_SPACE}/messages`,
     {
       method: 'POST',
       headers: {
@@ -202,69 +373,14 @@ Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${forma
 
 Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)`,
         cardsV2: [
-          {
-            cardId: `card-bug-report-internal`,
-            card: {
-              header: {
-                title: 'Bugs From Internal Report',
-                subtitle: 'Weekly Bug Report',
-              },
-              sections: [
-                {
-                  collapsible: true,
-                  widgets: [
-                    {
-                      decoratedText: {
-                        topLabel: 'Total Opened',
-                        text: bugs.internal.open.reduce(
-                          (acc, curr) => acc + curr,
-                          0,
-                        ),
-                      },
-                    },
-                  ],
-                },
-              ],
-            },
-          },
+          constructInternalWeeklyBugReport(bugs),
+          constructExternalWeeklyBugReport(bugs),
         ],
       }),
     },
   );
 
-  blocks = [
-    {
-      type: 'divider',
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*Weekly Bug Report*`,
-      },
-    },
-    ...createBugReportBlocks(bugs),
-    {
-      type: 'divider',
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*GLChat Performance Report*`,
-      },
-    },
-    ...createPerformanceReportBlocks(performance),
-    {
-      type: 'divider',
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: `*GL AIP Performance Report*`,
-      },
-    },
-    ...createAIPReportBlock(aip),
-  ];
+  const body = await foo.json();
+
+  console.log(body);
 }
