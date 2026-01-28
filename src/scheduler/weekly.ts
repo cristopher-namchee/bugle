@@ -14,6 +14,7 @@ import type { Env } from '@/types';
 
 function createBugReportBlocks(data: ResourceData<Bugs>) {
   const { data: bugs } = data;
+
   if (!bugs) {
     return [
       {
@@ -112,8 +113,50 @@ function createAIPReportBlock(data: ResourceData<AIP>) {
   ];
 }
 
+function constructInternalWeeklyBugReport(data: ResourceData<Bugs>) {
+  const { data: bugs } = data;
+
+  if (!bugs) {
+    return [
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: '⚠️ _Failed to fetch weekly bug report. Please check the execution log._',
+        },
+      },
+    ];
+  }
+
+  return {
+    cardId: `card-bug-report-internal`,
+    card: {
+      header: {
+        title: 'Bugs From Internal Report',
+        subtitle: 'Weekly Bug Report',
+      },
+      sections: [
+        {
+          collapsible: true,
+          widgets: [
+            {
+              decoratedText: {
+                topLabel: 'Total Opened',
+                text: bugs.internal.open.reduce((acc, curr) => acc + curr, 0),
+              },
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
 export async function sendWeeklyBugReport(env: Env) {
-  const token = await getGoogleAuthToken(env.SERVICE_ACCOUNT_EMAIL, env.SERVICE_ACCOUNT_PRIVATE_KEY);
+  const token = await getGoogleAuthToken(
+    env.SERVICE_ACCOUNT_EMAIL,
+    env.SERVICE_ACCOUNT_PRIVATE_KEY,
+  );
   if (!token) {
     return;
   }
@@ -134,98 +177,94 @@ export async function sendWeeklyBugReport(env: Env) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formattedText: `*📊 GLChat Weekly Report*
+          text: `*📊 GLChat Weekly Report*
 
 Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)
 
-⚠️ _Failed to fetch data from API. Please check the execution logs_.`.
+⚠️ _Failed to fetch data from API. Please check the execution logs_.`,
         }),
       },
     );
   }
 
-  const baseBlocks = [
+  const { bugs, performance, aip } = weeklyStats;
+
+  await fetch(
+    `https://chat.googleapis.com/v1/${env.DAILY_GOOGLE_SPACE}/messages`,
     {
-      type: 'header',
-      text: {
-        type: 'plain_text',
-        text: '',
-        emoji: true,
-      },
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: ``,
-      },
-    },
-  ];
-
-  let blocks: unknown[] = [
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: '',
-      },
-    },
-  ];
-
-  if (weeklyStats) {
-    const { bugs, performance, aip } = weeklyStats;
-
-    blocks = [
-      {
-        type: 'divider',
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*Weekly Bug Report*`,
-        },
-      },
-      ...createBugReportBlocks(bugs),
-      {
-        type: 'divider',
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*GLChat Performance Report*`,
-        },
-      },
-      ...createPerformanceReportBlocks(performance),
-      {
-        type: 'divider',
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*GL AIP Performance Report*`,
-        },
-      },
-      ...createAIPReportBlock(aip),
-    ];
-  }
-
-  try {
-  } catch (err) {
-    console.error(err);
-  } finally {
-    await fetch('https://slack.com/api/chat.postMessage', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        channel: env.WEEKLY_SLACK_CHANNEL,
-        blocks: [...baseBlocks, ...blocks],
+        text: `*📊 GLChat Weekly Report*
+
+Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)`,
+        cardsV2: [
+          {
+            cardId: `card-bug-report-internal`,
+            card: {
+              header: {
+                title: 'Bugs From Internal Report',
+                subtitle: 'Weekly Bug Report',
+              },
+              sections: [
+                {
+                  collapsible: true,
+                  widgets: [
+                    {
+                      decoratedText: {
+                        topLabel: 'Total Opened',
+                        text: bugs.internal.open.reduce(
+                          (acc, curr) => acc + curr,
+                          0,
+                        ),
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        ],
       }),
-    });
-  }
+    },
+  );
+
+  blocks = [
+    {
+      type: 'divider',
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Weekly Bug Report*`,
+      },
+    },
+    ...createBugReportBlocks(bugs),
+    {
+      type: 'divider',
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*GLChat Performance Report*`,
+      },
+    },
+    ...createPerformanceReportBlocks(performance),
+    {
+      type: 'divider',
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*GL AIP Performance Report*`,
+      },
+    },
+    ...createAIPReportBlock(aip),
+  ];
 }
