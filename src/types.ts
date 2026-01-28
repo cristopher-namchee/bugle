@@ -1,10 +1,12 @@
 export interface Env {
-  SLACK_BOT_TOKEN: string;
-  DAILY_SLACK_CHANNEL: string;
-  WEEKLY_SLACK_CHANNEL: string;
+  DAILY_GOOGLE_SPACE: string;
+  WEEKLY_GOOGLE_SPACE: string;
   SCRIPT_URL: string;
   SHIFT_URL: string;
   GITHUB_TOKEN: string;
+
+  SERVICE_ACCOUNT_EMAIL: string;
+  SERVICE_ACCOUNT_PRIVATE_KEY: string;
 }
 
 export interface GithubUser {

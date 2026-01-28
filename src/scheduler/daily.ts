@@ -1,8 +1,8 @@
 import { IssueReporter } from '@/const';
 import { formatDate } from '@/lib/date';
+import { getGoogleAuthToken, getUserIdByEmail } from '@/lib/google';
 
 import { getSchedule } from '@/lib/sheet';
-import { userLookup } from '@/lib/slack';
 
 import type { Env, GithubIssue, GithubUser } from '@/types';
 
@@ -17,23 +17,18 @@ const IssueReporterMap = {
 };
 
 export async function sendDailyBugReminder(env: Env) {
-  let blocks: Record<string, unknown>[] = [
-    {
-      type: 'header',
-      text: {
-        type: 'plain_text',
-        text: '🐛 GLChat Active Bug List',
-        emoji: true,
-      },
-    },
-    {
-      type: 'section',
-      text: {
-        type: 'mrkdwn',
-        text: '⚠️ _Failed to process daily bug report. Please check the execution log._',
-      },
-    },
-  ];
+  const token = await getGoogleAuthToken(
+    env.SERVICE_ACCOUNT_EMAIL,
+    env.SERVICE_ACCOUNT_PRIVATE_KEY,
+  );
+  if (!token) {
+    return;
+  }
+
+  let text = `*🐛 GLChat Active Bug List*
+          
+⚠️ _Failed to process daily bug report. Please check the execution log._`;
+  const cards: Record<string, unknown>[] = [];
 
   try {
     const today = new Date();
@@ -43,7 +38,7 @@ export async function sendDailyBugReminder(env: Env) {
       throw new Error('Schedule data is empty');
     }
 
-    const dailyBugPic = await userLookup(env, pics[0].email);
+    const dailyBugPic = await getUserIdByEmail(pics[0].email, token);
 
     const params = new URLSearchParams();
     params.append('labels', 'bug');
@@ -104,14 +99,14 @@ export async function sendDailyBugReminder(env: Env) {
           }),
         );
 
-        const slackAssignees = await Promise.all(
+        const assignees = await Promise.all(
           assigneeData.map(async ({ login, email }) => {
             if (!email) {
               return { found: false, user: login };
             }
 
-            const slackUser = await userLookup(env, email);
-            return { found: !!slackUser, user: slackUser ?? login };
+            const googleUser = await getUserIdByEmail(email, token);
+            return { found: !!googleUser, user: googleUser ?? login };
           }),
         );
 
@@ -121,331 +116,126 @@ export async function sendDailyBugReminder(env: Env) {
           reporter: issue.user.login,
           url: issue.html_url,
           created_at: issue.created_at,
-          assignees: slackAssignees,
+          assignees,
         };
       }),
     );
 
-    blocks = [
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: '🐛 GLChat Active Bug List',
-          emoji: true,
-        },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `There are *${bugsWithAssignees.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugsWithAssignees.length > 0 ? ':' : '🎉'}}`,
-        },
-      },
-      ...(bugsWithAssignees.length > 0
-        ? [
-            {
-              type: 'table',
-              rows: [
-                [
-                  {
-                    type: 'rich_text',
-                    elements: [
-                      {
-                        type: 'rich_text_section',
-                        elements: [
-                          {
-                            type: 'text',
-                            text: 'Issue #',
-                            style: { bold: true },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                  {
-                    type: 'rich_text',
-                    elements: [
-                      {
-                        type: 'rich_text_section',
-                        elements: [
-                          {
-                            type: 'text',
-                            text: 'Source',
-                            style: { bold: true },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                  {
-                    type: 'rich_text',
-                    elements: [
-                      {
-                        type: 'rich_text_section',
-                        elements: [
-                          {
-                            type: 'text',
-                            text: 'Title',
-                            style: { bold: true },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                  {
-                    type: 'rich_text',
-                    elements: [
-                      {
-                        type: 'rich_text_section',
-                        elements: [
-                          {
-                            type: 'text',
-                            text: 'Age',
-                            style: { bold: true },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                  {
-                    type: 'rich_text',
-                    elements: [
-                      {
-                        type: 'rich_text_section',
-                        elements: [
-                          {
-                            type: 'text',
-                            text: 'Assignee(s)',
-                            style: { bold: true },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                ],
-                ...bugsWithAssignees
-                  .sort((a, b) => a.created_at.localeCompare(b.created_at))
-                  .map((issue) => {
-                    let source =
-                      IssueReporterMap[issue.reporter] ?? 'Manual Report';
-                    let actualTitle = issue.title;
+    text = `*🐛 GLChat Active Bug List*
+    
+There are *${bugsWithAssignees.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugsWithAssignees.length > 0 ? ':' : '🎉'}}.
 
-                    const bracket = actualTitle.match(/^\[(.+?)\]/);
-                    if (bracket) {
-                      source = bracket[1].trim();
-                      actualTitle = actualTitle.replace(bracket[1], '');
-                    }
+✅ *Things to do as an assignee:*
 
-                    // It's possible to [source] - nonsense - title
-                    const lastDash = issue.title.lastIndexOf('-');
+- Investigate the issue that you've been assigned to.
+- Provide a status update in the issue page.
+- If you can't provide a status update to the issue, please state the reason in this thread.
 
-                    if (lastDash !== -1) {
-                      actualTitle = issue.title.slice(lastDash + 2).trim();
-                    }
+🧑 *Today's Bug PIC:*
 
-                    const issueAge = Math.round(
-                      (today.getTime() -
-                        new Date(issue.created_at ?? '').getTime()) /
-                        (1000 * 60 * 60 * 24),
-                    );
+<${dailyBugPic}>`;
 
-                    return [
-                      {
-                        type: 'rich_text',
-                        elements: [
-                          {
-                            type: 'rich_text_section',
-                            elements: [
-                              {
-                                type: 'link',
-                                text: issue.number.toString(),
-                                url: issue.url,
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      {
-                        type: 'rich_text',
-                        elements: [
-                          {
-                            type: 'rich_text_section',
-                            elements: [
-                              {
-                                type: 'text',
-                                text: source,
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      {
-                        type: 'rich_text',
-                        elements: [
-                          {
-                            type: 'rich_text_section',
-                            elements: [
-                              {
-                                type: 'text',
-                                text:
-                                  actualTitle.length > 56
-                                    ? `${actualTitle.slice(0, 56)}...`
-                                    : actualTitle,
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      {
-                        type: 'rich_text',
-                        elements: [
-                          {
-                            type: 'rich_text_section',
-                            elements: [
-                              {
-                                type: 'text',
-                                text: `${issueAge} day(s)`,
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      {
-                        type: 'rich_text',
-                        elements: [
-                          {
-                            type: 'rich_text_section',
-                            elements:
-                              issue.assignees.length === 0
-                                ? [
-                                    {
-                                      type: 'text',
-                                      text: '⚠️',
-                                    },
-                                  ]
-                                : issue.assignees.map((assignee) => {
-                                    if (assignee.found) {
-                                      return {
-                                        type: 'user',
-                                        user_id: assignee.user,
-                                      };
-                                    }
+    cards.push(
+      ...bugsWithAssignees
+        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+        .map((issue) => {
+          let source = IssueReporterMap[issue.reporter] ?? 'Manual Report';
+          let actualTitle = issue.title;
 
-                                    return {
-                                      type: 'text',
-                                      text: assignee.user,
-                                      style: {
-                                        code: true,
-                                      },
-                                    };
-                                  }),
-                          },
-                        ],
-                      },
-                    ];
-                  }),
-              ],
-            },
-            {
-              type: 'divider',
-            },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `✅ *Things to do as an assignee:*`,
+          const bracket = actualTitle.match(/^\[(.+?)\]/);
+          if (bracket) {
+            source = bracket[1].trim();
+            actualTitle = actualTitle.replace(bracket[1], '');
+          }
+
+          // It's possible to [source] - nonsense - title
+          const lastDash = issue.title.lastIndexOf('-');
+
+          if (lastDash !== -1) {
+            actualTitle = issue.title.slice(lastDash + 2).trim();
+          }
+
+          const issueAge = Math.round(
+            (today.getTime() - new Date(issue.created_at ?? '').getTime()) /
+              (1000 * 60 * 60 * 24),
+          );
+
+          return {
+            cardId: `bug-${issue.number}`,
+            card: {
+              header: {
+                title: `#${issue.number}`,
+                subtitle: source,
               },
-            },
-            {
-              type: 'rich_text',
-              elements: [
+              sections: [
                 {
-                  type: 'rich_text_list',
-                  style: 'bullet',
-                  indent: 0,
-                  elements: [
+                  collapsible: true,
+                  widgets: [
                     {
-                      type: 'rich_text_section',
-                      elements: [
-                        {
-                          type: 'text',
-                          text: "Investigate the issue that you've been assigned to.",
+                      decoratedText: {
+                        topLabel: 'URL',
+                        startIcon: {
+                          knownIcon: 'BOOKMARK',
                         },
-                      ],
+                        text: `<a href="${issue.url}">${issue.url}</a>`,
+                      },
                     },
                     {
-                      type: 'rich_text_section',
-                      elements: [
-                        {
-                          type: 'text',
-                          text: 'Provide a status update in the issue page.',
+                      decoratedText: {
+                        topLabel: 'Title',
+                        startIcon: {
+                          knownIcon: 'DESCRIPTION',
                         },
-                      ],
+                        text: issue.title,
+                      },
                     },
                     {
-                      type: 'rich_text_section',
-                      elements: [
-                        {
-                          type: 'text',
-                          text: "If you can't provide a status update to the issue, please state the reason in this thread.",
+                      decoratedText: {
+                        topLabel: 'Age',
+                        startIcon: {
+                          knownIcon: 'CLOCK',
                         },
-                      ],
+                        text: `${issueAge} day(s) - since ${formatDate(issue.created_at, { weekday: undefined })}`,
+                      },
+                    },
+                    {
+                      decoratedText: {
+                        topLabel: 'Assignee',
+                        startIcon: {
+                          knownIcon: 'PERSON',
+                        },
+                        text: issue.assignees
+                          ? issue.assignees
+                              .map((assignee) =>
+                                assignee.found ? `<${assignee.user}>` : '',
+                              )
+                              .join(' ')
+                          : '⚠️',
+                      },
                     },
                   ],
                 },
               ],
             },
-          ]
-        : []),
-      {
-        type: 'divider',
-      },
-      {
-        type: 'header',
-        text: {
-          type: 'plain_text',
-          text: '🐛 PIC for Daily Bug Report',
-          emoji: true,
-        },
-      },
-      {
-        type: 'rich_text',
-        elements: [
-          {
-            type: 'rich_text_section',
-            elements: [
-              dailyBugPic
-                ? {
-                    type: 'user',
-                    user_id: dailyBugPic,
-                  }
-                : {
-                    type: 'text',
-                    text: pics[0].name || 'Not set',
-                    style: {
-                      code: !!pics[0].name,
-                      italic: !pics[0].name,
-                    },
-                  },
-            ],
-          },
-        ],
-      },
-    ];
+          };
+        }),
+    );
   } catch (err) {
     console.error(err);
   } finally {
-    await fetch('https://slack.com/api/chat.postMessage', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${env.SLACK_BOT_TOKEN}`,
-        'Content-Type': 'application/json',
+    await fetch(
+      `https://chat.googleapis.com/v1/${env.DAILY_GOOGLE_SPACE}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          formattedText: text,
+          cardsV2: cards,
+        }),
       },
-      body: JSON.stringify({
-        channel: env.DAILY_SLACK_CHANNEL,
-        blocks,
-      }),
-    });
+    );
   }
 }
