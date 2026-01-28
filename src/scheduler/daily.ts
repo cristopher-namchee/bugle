@@ -166,11 +166,20 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
                         },
                         {
                           decoratedText: {
+                            topLabel: 'Created At',
+                            startIcon: {
+                              knownIcon: 'INVITE',
+                            },
+                            text: `${formatDate(issue.created_at, { weekday: undefined })}`,
+                          },
+                        },
+                        {
+                          decoratedText: {
                             topLabel: 'Age',
                             startIcon: {
                               knownIcon: 'CLOCK',
                             },
-                            text: `${issueAge} day(s) - since ${formatDate(issue.created_at, { weekday: undefined })}`,
+                            text: `${issueAge} day(s)`,
                           },
                         },
                       ],
