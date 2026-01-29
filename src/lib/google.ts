@@ -24,6 +24,7 @@ function pemToArrayBuffer(pem: string) {
   const base64 = pem
     .replace(/-----BEGIN PRIVATE KEY-----/, '')
     .replace(/-----END PRIVATE KEY-----/, '')
+    .replace(/\\n/g, '')
     .replace(/\s+/g, '');
 
   const binary = atob(base64);
