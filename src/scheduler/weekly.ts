@@ -22,10 +22,10 @@ function constructPerformanceReport(data: ResourceData<Performance>) {
 
   return `*⏱️ Performance Report*
     
-    ${performance[0]}
-    ${performance[1]}
-    ${performance[2]}
-    ${performance[3]}`;
+${performance[0]}
+${performance[1]}
+${performance[2]}
+${performance[3]}`;
 }
 
 function constructAIPReport(data: ResourceData<AIP>) {
@@ -39,7 +39,7 @@ function constructAIPReport(data: ResourceData<AIP>) {
   return `*🏃 GL AIP Report*
     
 _${AIPModel}, ${aip.users} Concurrent Users_
-${Object.entries(aip.scenario).reduce((acc, curr, idx) => `${acc}        Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`;
+${Object.entries(aip.scenario).reduce((acc, curr, idx) => `${acc}    Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`;
 }
 
 function constructWeeklyBugReport(data: ResourceData<Bugs>): string {
