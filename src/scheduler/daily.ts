@@ -46,7 +46,7 @@ export async function sendDailyBugReminder(env: Env) {
   if (!pics) {
     console.error('Schedule data is empty');
 
-    return fetch(
+    await fetch(
       `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages`,
       {
         method: 'POST',
@@ -61,6 +61,8 @@ export async function sendDailyBugReminder(env: Env) {
         }),
       },
     );
+    
+    return;
   }
 
   const dailyBugPic = await getUserIdByEmail(

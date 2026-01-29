@@ -9,7 +9,6 @@ export const JWT = {
   Scopes: [
     'https://www.googleapis.com/auth/chat.messages.create',
     'https://www.googleapis.com/auth/chat.messages',
-    'https://www.googleapis.com/auth/directory.readonly',
     'https://www.googleapis.com/auth/chat.memberships',
   ],
   Algorithm: 'RS256',
