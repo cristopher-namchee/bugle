@@ -1,29 +1,20 @@
 export interface Env {
-  SLACK_BOT_TOKEN: string;
-  DAILY_SLACK_CHANNEL: string;
-  WEEKLY_SLACK_CHANNEL: string;
+  DAILY_GOOGLE_SPACE: string;
+  WEEKLY_GOOGLE_SPACE: string;
   SCRIPT_URL: string;
   SHIFT_URL: string;
   GITHUB_TOKEN: string;
+
+  SERVICE_ACCOUNT_EMAIL: string;
+  SERVICE_ACCOUNT_PRIVATE_KEY: string;
 }
 
-export interface GithubUser {
-  login: string;
-  name: string;
-  email: string | null;
-}
-
-export interface GithubIssue {
-  number: number;
+export interface Bug {
   title: string;
-  html_url: string;
+  number: number;
+  url: string;
   created_at: string;
-  user: {
-    login: string;
-  };
-  assignees?: {
-    id: number;
-    url: string;
-    nodeid: number;
-  }[];
+  reporter: string;
+  // array of e-mails
+  assignees: string[];
 }
