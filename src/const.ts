@@ -19,3 +19,6 @@ export const GLChatMetadata = {
   owner: 'GDP-ADMIN',
   repo: 'glchat',
 };
+
+// https://developers.cloudflare.com/workers/platform/limits/
+export const DefaultChunkSize = 5;
