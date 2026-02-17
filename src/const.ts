@@ -1,5 +1,4 @@
 export const IssueReporter = {
-  Form: 'catapa-infra',
   Sentry: 'sentry-gdplabs[bot]',
 };
 
