@@ -5,13 +5,9 @@ import { getCurrentlyActiveBugs } from '@/lib/github';
 import { getGoogleAuthToken, getUserIdByEmail } from '@/lib/google';
 
 import { getSchedule } from '@/lib/sheet';
+import { extractTitleMetadata } from '@/lib/string';
 
 import type { Bug, Env } from '@/types';
-
-const IssueReporterMap = {
-  [IssueReporter.Form]: 'Feedback Form',
-  [IssueReporter.Sentry]: 'Sentry',
-};
 
 function resolveAssignees(bugs: Bug[], space: string, token: string) {
   return Promise.all(
@@ -81,13 +77,17 @@ export async function sendDailyBugReminder(env: Env) {
   const text = `*🐛 GLChat Active Bug List*
 
 There are *${bugs.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugs.length > 0 ? '.' : ' 🎉'}
-
-✅ *Things to do as an assignee:*
+${
+  bugs.length
+    ? `
+✅ *Things to do as when assigned to bug(s):*
 
 - Investigate the issue that you've been assigned to.
 - Provide a status update in the issue page.
 - If you can't provide a status update to the issue, please state the reason in this thread.
-
+`
+    : ''
+}
 🧑 *Today's Bug PIC:*
 
 ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
@@ -122,20 +122,10 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
 
     await Promise.all(
       issues.map(async (issue) => {
-        let source = IssueReporterMap[issue.reporter] ?? 'Manual Report';
-        let actualTitle = issue.title;
+        const meta = extractTitleMetadata(issue.title);
 
-        const bracket = actualTitle.match(/^\[(.+?)\]/);
-        if (bracket) {
-          source = bracket[1].trim();
-          actualTitle = actualTitle.replace(bracket[1], '');
-        }
-
-        // It's possible to [source] - nonsense - title
-        const lastDash = issue.title.lastIndexOf('-');
-
-        if (lastDash !== -1) {
-          actualTitle = issue.title.slice(lastDash + 2).trim();
+        if (issue.reporter === IssueReporter.Sentry) {
+          meta.source = 'Sentry';
         }
 
         const issueAge = Math.round(
@@ -162,8 +152,8 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
                   cardId: `card-issue-${issue.number}`,
                   card: {
                     header: {
-                      title: `#${issue.number} - ${issue.title}`,
-                      subtitle: source,
+                      title: meta.title,
+                      subtitle: `#${issue.number}`,
                     },
                     sections: [
                       {
@@ -178,6 +168,26 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
                               text: `<a href="${issue.url}">${issue.url}</a>`,
                             },
                           },
+                          {
+                            decoratedText: {
+                              topLabel: 'Source',
+                              startIcon: {
+                                knownIcon: 'MULTIPLE_PEOPLE',
+                              },
+                              text: meta.source,
+                            },
+                          },
+                          meta.type
+                            ? {
+                                decoratedText: {
+                                  topLabel: 'Type',
+                                  startIcon: {
+                                    knownIcon: 'DESCRIPTION',
+                                  },
+                                  text: meta.type,
+                                },
+                              }
+                            : undefined,
                           {
                             decoratedText: {
                               topLabel: 'Created At',
@@ -196,7 +206,7 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
                               text: `${issueAge} day(s)`,
                             },
                           },
-                        ],
+                        ].filter(Boolean),
                       },
                     ],
                   },
