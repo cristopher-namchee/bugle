@@ -21,7 +21,6 @@ export interface Bug {
 
 export interface IssueMetadata {
   title: string;
-  source?: string;
-  // empty for now
+  source: string;
   type?: string;
 }
