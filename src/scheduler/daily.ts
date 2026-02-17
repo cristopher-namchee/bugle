@@ -77,13 +77,17 @@ export async function sendDailyBugReminder(env: Env) {
   const text = `*🐛 GLChat Active Bug List*
 
 There are *${bugs.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugs.length > 0 ? '.' : ' 🎉'}
-
-✅ *Things to do as an assignee:*
+${
+  bugs.length
+    ? `
+✅ *Things to do as when assigned to bug(s):*
 
 - Investigate the issue that you've been assigned to.
 - Provide a status update in the issue page.
 - If you can't provide a status update to the issue, please state the reason in this thread.
-
+`
+    : ''
+}
 🧑 *Today's Bug PIC:*
 
 ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
