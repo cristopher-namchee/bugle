@@ -18,3 +18,10 @@ export interface Bug {
   // array of e-mails
   assignees: string[];
 }
+
+export interface IssueMetadata {
+  title: string;
+  source?: string;
+  // empty for now
+  type?: string;
+}
