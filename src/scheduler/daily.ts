@@ -126,6 +126,7 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
 
         if (issue.reporter === IssueReporter.Sentry) {
           meta.source = 'Sentry';
+          meta.type = 'Automated Sentry Report';
         }
 
         const issueAge = Math.round(
