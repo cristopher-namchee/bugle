@@ -125,7 +125,10 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
         const meta = extractTitleMetadata(issue.title);
 
         if (issue.reporter === IssueReporter.Sentry) {
+          // use the original title
+          meta.title = issue.title;
           meta.source = 'Sentry';
+          meta.type = 'Automated Sentry Report';
         }
 
         const issueAge = Math.round(
@@ -133,7 +136,7 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
             (1_000 * 60 * 60 * 24),
         );
 
-        const picDisplay = issue.assignees.length
+        const picDisplay = issue.assignees.filter(Boolean).length
           ? `cc: ${issue.assignees.map((a) => (a.startsWith('users/') ? `<${a}>` : `\`${a}\``)).join(' ')}`
           : '⚠️ _Unassigned_';
 
