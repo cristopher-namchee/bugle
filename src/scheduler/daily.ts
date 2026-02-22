@@ -125,6 +125,8 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
         const meta = extractTitleMetadata(issue.title);
 
         if (issue.reporter === IssueReporter.Sentry) {
+          // use the original title
+          meta.title = issue.title;
           meta.source = 'Sentry';
           meta.type = 'Automated Sentry Report';
         }
