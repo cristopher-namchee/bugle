@@ -44,7 +44,7 @@ describe('extractTitleMetadata', () => {
     expect(result.type).toBe('Prompting or result issue');
   });
 
-  it('test', () => {
+  it('should get string before first dash only as the regex is non-greedy', () => {
     const title =
       '[AVA Feedback] Prompt / result issue - System Errors and Multi-User Limitation';
 
