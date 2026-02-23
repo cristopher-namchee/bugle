@@ -43,4 +43,15 @@ describe('extractTitleMetadata', () => {
     expect(result.source).toBe('GLoria Feedback');
     expect(result.type).toBe('Prompting or result issue');
   });
+
+  it('should get string before first dash only as the regex is non-greedy', () => {
+    const title =
+      '[AVA Feedback] Prompt / result issue - System Errors and Multi-User Limitation';
+
+    const result = extractTitleMetadata(title);
+
+    expect(result.title).toBe('System Errors and Multi-User Limitation');
+    expect(result.source).toBe('AVA Feedback');
+    expect(result.type).toBe('Prompt / result issue');
+  });
 });
