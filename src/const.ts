@@ -19,5 +19,4 @@ export const GLChatMetadata = {
   repo: 'glchat',
 };
 
-// https://developers.cloudflare.com/workers/platform/limits/
 export const DefaultChunkSize = 5;

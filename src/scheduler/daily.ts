@@ -7,7 +7,7 @@ import { getGoogleAuthToken, getUserIdByEmail } from '@/lib/google';
 import { getSchedule } from '@/lib/sheet';
 import { extractTitleMetadata } from '@/lib/string';
 
-import type { Bug, Env } from '@/types';
+import type { Bug } from '@/types';
 
 function resolveAssignees(bugs: Bug[], space: string, token: string) {
   return Promise.all(
@@ -33,7 +33,9 @@ function resolveAssignees(bugs: Bug[], space: string, token: string) {
   );
 }
 
-export async function sendDailyBugReminder(env: Env) {
+export async function sendDailyBugReminder() {
+  const env = process.env;
+
   const googleToken = await getGoogleAuthToken(
     env.SERVICE_ACCOUNT_EMAIL,
     env.SERVICE_ACCOUNT_PRIVATE_KEY,
@@ -44,7 +46,7 @@ export async function sendDailyBugReminder(env: Env) {
 
   const today = new Date();
 
-  const pics = await getSchedule(env, today);
+  const pics = await getSchedule(today);
   if (!pics) {
     console.error('Schedule data is empty');
 
@@ -73,7 +75,7 @@ export async function sendDailyBugReminder(env: Env) {
     googleToken,
   );
 
-  const bugs = await getCurrentlyActiveBugs(env.GITHUB_TOKEN);
+  const bugs = await getCurrentlyActiveBugs(env.GH_TOKEN);
   const text = `*🐛 GLChat Active Bug List*
 
 There are *${bugs.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugs.length > 0 ? '.' : ' 🎉'}
@@ -225,3 +227,7 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
     );
   }
 }
+
+(async () => {
+  await sendDailyBugReminder();
+})();
