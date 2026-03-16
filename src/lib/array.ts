@@ -1,12 +1,12 @@
-import { DefaultChunkSize } from "@/const";
+import { DefaultChunkSize } from '@/const';
 
 /**
  * Split array into multiple sub-arrays of dictated size.
- * 
+ *
  * The main purpose of this function is to circumvent concurrent
  * requests limitations.
- * 
- * @param {T[]} arr Array to be chunked 
+ *
+ * @param {T[]} arr Array to be chunked
  * @param {number} size Size of the chunk. Defaults to 5.
  * @returns {T[][]} Chunked array. Throws Error when size is lower than equal
  * to zero.

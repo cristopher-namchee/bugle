@@ -52,9 +52,7 @@ interface Employee {
 
 type ShiftData = [Employee, Employee, Employee, Employee, Employee];
 
-export async function getSchedule(
-  date: Date,
-): Promise<ShiftData | null> {
+export async function getSchedule(date: Date): Promise<ShiftData | null> {
   const env = process.env;
 
   const url = new URL(env.SHIFT_URL);
@@ -89,7 +87,7 @@ export async function getSchedule(
 
 export async function getReport(): Promise<WeeklyReport | null> {
   const env = process.env;
-  
+
   const url = new URL(env.SCRIPT_URL);
   const params = new URLSearchParams();
 
