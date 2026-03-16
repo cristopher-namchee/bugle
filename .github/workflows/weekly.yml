@@ -28,7 +28,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build daily script
+      - name: Build weekly script
+        run: pnpm run build
+
+      - name: Run weekly script
         run: node ./dist/scheduler/weekly.mjs
         env:
           WEEKLY_GOOGLE_SPACE: ${{ vars.WEEKLY_GOOGLE_SPACE }}
@@ -37,4 +40,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           SERVICE_ACCOUNT_EMAIL: ${{ vars.SERVICE_ACCOUNT_EMAIL }}
           SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
-          

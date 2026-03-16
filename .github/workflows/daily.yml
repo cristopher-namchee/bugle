@@ -29,6 +29,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build daily script
+        run: pnpm run build
+
+      - name: Run daily script
         run: node ./dist/scheduler/daily.mjs
         env:
           DAILY_GOOGLE_SPACE: ${{ vars.DAILY_GOOGLE_SPACE }}
