@@ -30,4 +30,10 @@ jobs:
 
       - name: Build daily script
         run: node ./dist/scheduler/weekly.mjs
-        
+        env:
+          WEEKLY_GOOGLE_SPACE: ${{ vars.WEEKLY_GOOGLE_SPACE }}
+          SCRIPT_URL: ${{ vars.SCRIPT_URL }}
+          SHIFT_URL: ${{ vars.SHIFT_URL }}
+          GH_TOKEN: ${{ secret.GH_TOKEN }}
+          SERVICE_ACCOUNT_EMAIL: ${{ vars.SERVICE_ACCOUNT_EMAIL }}
+          SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.SERVICE_ACCOUNT_PRIVATE_KEY }}
