@@ -6,7 +6,7 @@ import { getGoogleAuthToken, getUserIdByEmail } from '@/lib/google';
 
 import { getSchedule } from '@/lib/sheet';
 
-import type { Bug, Env } from '@/types';
+import type { Bug } from '@/types';
 
 const IssueReporterMap = {
   [IssueReporter.Form]: 'Feedback Form',
@@ -37,7 +37,9 @@ function resolveAssignees(bugs: Bug[], space: string, token: string) {
   );
 }
 
-export async function sendDailyBugReminder(env: Env) {
+export async function sendDailyBugReminder() {
+  const env = process.env;
+
   const googleToken = await getGoogleAuthToken(
     env.SERVICE_ACCOUNT_EMAIL,
     env.SERVICE_ACCOUNT_PRIVATE_KEY,
@@ -48,7 +50,7 @@ export async function sendDailyBugReminder(env: Env) {
 
   const today = new Date();
 
-  const pics = await getSchedule(env, today);
+  const pics = await getSchedule(today);
   if (!pics) {
     console.error('Schedule data is empty');
 
@@ -212,3 +214,7 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
     );
   }
 }
+
+(async () => {
+  await sendDailyBugReminder();
+})();

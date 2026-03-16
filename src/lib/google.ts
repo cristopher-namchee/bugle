@@ -159,6 +159,6 @@ export async function getUserIdByEmail(
   } catch (err) {
     console.error('Failed to get Google user ID:', err);
 
-    return '';
+    return email;
   }
 }

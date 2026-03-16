@@ -10,8 +10,6 @@ import {
   type ResourceData,
 } from '@/lib/sheet';
 
-import type { Env } from '@/types';
-
 function constructPerformanceReport(data: ResourceData<Performance>) {
   const { data: performance } = data;
   if (!performance) {
@@ -79,7 +77,9 @@ _Bugs from External Report_
     Closed As Enhancements: ${bugs.external.closed[3]} bug(s)`;
 }
 
-export async function sendWeeklyBugReport(env: Env) {
+export async function sendWeeklyBugReport() {
+  const env = process.env;
+
   const token = await getGoogleAuthToken(
     env.SERVICE_ACCOUNT_EMAIL,
     env.SERVICE_ACCOUNT_PRIVATE_KEY,
@@ -92,7 +92,7 @@ export async function sendWeeklyBugReport(env: Env) {
   const firstDate = new Date();
   firstDate.setDate(1);
 
-  const weeklyStats = await getReport(env);
+  const weeklyStats = await getReport();
 
   if (!weeklyStats) {
     await fetch(
@@ -140,3 +140,7 @@ ${constructAIPReport(aip)}`.trim(),
     },
   );
 }
+
+(async () => {
+  await sendWeeklyBugReport();
+})();
