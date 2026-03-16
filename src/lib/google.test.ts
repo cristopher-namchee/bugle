@@ -162,14 +162,14 @@ describe('getGoogleUserID', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it('should return the string as-id if People API returned non-200', async () => {
+  it('should return the string as-is if People API returned non-200', async () => {
     mockServer.use(
       http.get('https://chat.googleapis.com/v1/spaces/123/members/fooo', () => {
         return HttpResponse.json({}, { status: 400 });
       }),
     );
 
-    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const result = await getUserIdByEmail('fooo', '123', 'token');
 
