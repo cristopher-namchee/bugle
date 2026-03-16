@@ -75,7 +75,7 @@ export async function sendDailyBugReminder() {
     googleToken,
   );
 
-  const bugs = await getCurrentlyActiveBugs(env.GITHUB_TOKEN);
+  const bugs = await getCurrentlyActiveBugs(env.GH_TOKEN);
   const text = `*🐛 GLChat Active Bug List*
 
 There are *${bugs.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugs.length > 0 ? '.' : ' 🎉'}
