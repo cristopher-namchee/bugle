@@ -1,6 +1,5 @@
 export const IssueReporter = {
-  Form: 'infra-gl',
-  Sentry: 'sentry[bot]',
+  Sentry: 'sentry-gdplabs[bot]',
 };
 
 export const AIPModel = 'gpt-4.1';

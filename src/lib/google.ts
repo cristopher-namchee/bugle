@@ -128,7 +128,7 @@ export async function getUserIdByEmail(
 ): Promise<string> {
   try {
     if (!email) {
-      return '';
+      return email;
     }
 
     const url = new URL(
