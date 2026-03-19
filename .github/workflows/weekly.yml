@@ -3,7 +3,7 @@ name: Send weekly status report to general channel
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 8 * * 5'
+    # - cron: '0 8 * * 5'
 
 jobs:
   report:
