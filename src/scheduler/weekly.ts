@@ -14,28 +14,28 @@ function constructPerformanceReport(data: ResourceData<Performance>) {
   const { data: performance } = data;
   if (!performance) {
     return `*⏱️ Performance Report*
-    
+
 ⚠️ _Failed to fetch performance report. Please check the execution log._`;
   }
 
   return `*⏱️ Performance Report*
-    
-${performance[0]}
-${performance[1]}
-${performance[2]}
-${performance[3]}`;
+
+_${performance[0]}_
+  ${performance[1]}
+  ${performance[2]}
+  ${performance[3]}`;
 }
 
 function constructAIPReport(data: ResourceData<AIP>) {
   const { data: aip } = data;
   if (!aip) {
     return `*🏃 GL AIP Report*
-    
+
 ⚠️ _Failed to fetch GL AIP report. Please check the execution log._`;
   }
 
   return `*🏃 GL AIP Report*
-    
+
 _${AIPModel}, ${aip.users} Concurrent Users_
 ${Object.entries(aip.scenario).reduce((acc, curr, idx) => `${acc}    Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`;
 }
@@ -44,12 +44,12 @@ function constructWeeklyBugReport(data: ResourceData<Bugs>): string {
   const { data: bugs } = data;
   if (!bugs) {
     return `*🐛 Weekly Bug Report*
-    
+
 ⚠️ _Failed to fetch weekly bug report. Please check the execution log._`;
   }
 
   return `*🐛 Weekly Bug Report*
-    
+
 _Bugs from Internal Report_
 
   Total Opened: ${bugs.internal.open.reduce((acc, curr) => acc + curr, 0)} bug(s)
@@ -62,9 +62,9 @@ _Bugs from Internal Report_
     P1: ${bugs.internal.closed[1]} bug(s)
     P2: ${bugs.internal.closed[2]} bug(s)
     Closed As Enhancements: ${bugs.internal.closed[3]} bug(s)
-    
+
 _Bugs from External Report_
-    
+
   Total Opened: ${bugs.external.open.reduce((acc, curr) => acc + curr, 0)} bug(s)
     P0: ${bugs.external.open[0]} bug(s)
     P1: ${bugs.external.open[1]} bug(s)
