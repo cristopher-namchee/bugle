@@ -1,5 +1,4 @@
-import { GLChatMetadata } from '@/const';
-
+import { RepositoryOwner } from '@/const';
 import type { Bug } from '@/types';
 
 interface GithubUser {
@@ -28,34 +27,41 @@ interface GithubIssue {
  *
  * An issue is classified as a bug when it has `bug` label on them (case-sensitive).
  *
- * @param {string} githubToken GitHub access token
+ * @param {string} repo Repository name
+ * @param {string} token GitHub access token
  * @returns {Promise<Bug[]>} Resolves into a list of bugs. Will return empty
  * array if GitHub API call failed.
  */
 export async function getCurrentlyActiveBugs(
-  githubToken: string,
+  repo: string,
+  token: string,
 ): Promise<Bug[]> {
   const params = new URLSearchParams();
   params.append('labels', 'bug');
   params.append('state', 'open');
 
   const url = new URL(
-    `/repos/${GLChatMetadata.owner}/${GLChatMetadata.repo}/issues`,
+    `/repos/${RepositoryOwner}/${repo}/issues`,
     'https://api.github.com',
   );
   url.search = params.toString();
+
+  console.log(url.toString());
 
   const response = await fetch(url, {
     method: 'GET',
     headers: {
       Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${githubToken}`,
+      Authorization: `Bearer ${token}`,
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'bugle',
     },
   });
 
   if (!response.ok) {
+    const body = await response.json();
+
+    console.log(body);
     console.error(
       `Failed to fetch issues from GitHub. Response returned ${response.status}`,
     );
@@ -85,7 +91,7 @@ export async function getCurrentlyActiveBugs(
           const userResponse = await fetch(user.url, {
             headers: {
               Accept: 'application/vnd.github+json',
-              Authorization: `Bearer ${githubToken}`,
+              Authorization: `Bearer ${token}`,
               'X-GitHub-Api-Version': '2022-11-28',
               'User-Agent': 'bugle',
             },

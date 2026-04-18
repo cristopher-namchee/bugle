@@ -14,9 +14,15 @@ export const JWT = {
   Grant: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
 };
 
-export const GLChatMetadata = {
-  owner: 'GDP-ADMIN',
-  repo: 'glchat',
+export const RepositoryOwner = 'GDP-ADMIN';
+export const Repositories: Record<string, string> = {
+  glchat: 'GLChat',
+  'smart-search': 'Smart Search',
+  'ai-agent-platform': 'Agent',
+  'gl-connectors': 'GLConnectors',
+  'gl-langflow': 'LangFlow',
+  'glchat-mobile-app': 'GLChat Native',
+  meemo: 'Meemo',
 };
 
 export const DefaultChunkSize = 5;
