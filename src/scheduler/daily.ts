@@ -77,6 +77,10 @@ export async function sendDailyBugReminder() {
 
   for (const [repo, label] of Object.entries(Repositories)) {
     const bugs = await getCurrentlyActiveBugs(repo, env.GH_TOKEN);
+    if (!bugs) {
+      continue;
+    }
+
     const text = `*🐛 ${label} Active Bug List*
 
   There are *${bugs.length}* of <https://github.com/GDP-ADMIN/${repo}/issues|currently active bugs in ${label}> per *${formatDate(today)}*${bugs.length > 0 ? '.' : ' 🎉'}

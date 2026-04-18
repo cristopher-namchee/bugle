@@ -38,9 +38,9 @@ describe('getCurrentlyActiveBugs', () => {
     );
 
     const spy = vi.spyOn(console, 'error').mockImplementationOnce(() => {});
-    const result = await getCurrentlyActiveBugs('tokenA');
+    const result = await getCurrentlyActiveBugs('glchat', 'tokenA');
 
-    expect(result).toEqual([]);
+    expect(result).toBeUndefined();
     expect(spy).toHaveBeenCalledOnce();
   });
 
@@ -76,7 +76,7 @@ describe('getCurrentlyActiveBugs', () => {
       }),
     );
 
-    const result = await getCurrentlyActiveBugs('tokenA');
+    const result = await getCurrentlyActiveBugs('glchat', 'tokenA');
 
     expect(result).toEqual([
       {
@@ -108,7 +108,7 @@ describe('getCurrentlyActiveBugs', () => {
       }),
     );
 
-    const result = await getCurrentlyActiveBugs('tokenA');
+    const result = await getCurrentlyActiveBugs('glchat', 'tokenA');
 
     expect(result).toEqual([
       {
@@ -153,7 +153,7 @@ describe('getCurrentlyActiveBugs', () => {
       }),
     );
 
-    const result = await getCurrentlyActiveBugs('tokenA');
+    const result = await getCurrentlyActiveBugs('glchat', 'tokenA');
 
     expect(result).toEqual([
       {

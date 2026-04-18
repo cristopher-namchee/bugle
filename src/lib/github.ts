@@ -29,13 +29,13 @@ interface GithubIssue {
  *
  * @param {string} repo Repository name
  * @param {string} token GitHub access token
- * @returns {Promise<Bug[]>} Resolves into a list of bugs. Will return empty
- * array if GitHub API call failed.
+ * @returns {Promise<Bug[] | undefined>} Resolves into a list of bugs. Will return undefined
+ * if GitHub API call failed.
  */
 export async function getCurrentlyActiveBugs(
   repo: string,
   token: string,
-): Promise<Bug[]> {
+): Promise<Bug[] | undefined> {
   const params = new URLSearchParams();
   params.append('labels', 'bug');
   params.append('state', 'open');
@@ -45,8 +45,6 @@ export async function getCurrentlyActiveBugs(
     'https://api.github.com',
   );
   url.search = params.toString();
-
-  console.log(url.toString());
 
   const response = await fetch(url, {
     method: 'GET',
@@ -59,14 +57,11 @@ export async function getCurrentlyActiveBugs(
   });
 
   if (!response.ok) {
-    const body = await response.json();
-
-    console.log(body);
     console.error(
       `Failed to fetch issues from GitHub. Response returned ${response.status}`,
     );
 
-    return [];
+    return undefined;
   }
 
   const bugs = (await response.json()) as GithubIssue[];
