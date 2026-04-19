@@ -1,4 +1,4 @@
-import { IssueReporter } from '@/const';
+import { IssueReporter, Repositories } from '@/const';
 import { chunkArray } from '@/lib/array';
 import { formatDate } from '@/lib/date';
 import { getCurrentlyActiveBugs } from '@/lib/github';
@@ -75,12 +75,50 @@ export async function sendDailyBugReminder() {
     googleToken,
   );
 
-  const bugs = await getCurrentlyActiveBugs(env.GH_TOKEN);
-  const text = `*🐛 GLChat Active Bug List*
+  const rawBugs = await Promise.all(
+    Object.entries(Repositories).map(
+      async ([repo, label]) =>
+        [label, await getCurrentlyActiveBugs(repo, env.GH_TOKEN)] as [
+          string,
+          Bug[] | undefined,
+        ],
+    ),
+  );
 
-There are *${bugs.length}* of <https://github.com/GDP-ADMIN/glchat/issues|currently active bugs in GLChat> per *${formatDate(today)}*${bugs.length > 0 ? '.' : ' 🎉'}
+  const bugs = rawBugs.reduce(
+    (acc, curr) => {
+      if (!curr[1]) {
+        return acc;
+      }
+
+      acc[curr[0]] = curr[1];
+
+      return acc;
+    },
+    {} as Record<string, Bug[]>,
+  );
+  const bugCount = Object.values(bugs).reduce((acc, curr) => {
+    acc.push(...curr);
+
+    return acc;
+  }).length;
+
+  const text = `*🐛 GLChat Ecosystem Active Bug List*
+
+There are *${bugCount}* of active bugs in GLChat ecosystem per *${formatDate(today)}*${bugCount > 0 ? ':' : ' 🎉'}
 ${
-  bugs.length
+  bugCount
+    ? `
+${Object.entries(bugs)
+  .map(
+    ([label, repo]) =>
+      `- *${label}*, ${repo.length} ${repo.length === 1 ? 'bug' : 'bugs'}`,
+  )
+  .join('\n')}`
+    : ''
+}
+${
+  bugCount
     ? `
 ✅ *Things to do as when assigned to bug(s):*
 
@@ -111,13 +149,32 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
   const { thread } = (await threadStarter.json()) as {
     thread: { name: string };
   };
-
   const threadId = thread.name;
-  const chunkedBugs = [...chunkArray(bugs)];
 
-  for (const chunk of chunkedBugs) {
+  for (const [label, bugList] of Object.entries(bugs)) {
+    if (bugList.length === 0) {
+      continue;
+    }
+
+    await fetch(
+      `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${googleToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: `🐛 _List of bugs for ${label}_`,
+          thread: {
+            name: threadId,
+          },
+        }),
+      },
+    );
+
     const issues = await resolveAssignees(
-      chunk,
+      bugList,
       env.DAILY_GOOGLE_SPACE,
       googleToken,
     );
@@ -127,7 +184,6 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
         const meta = extractTitleMetadata(issue.title);
 
         if (issue.reporter === IssueReporter.Sentry) {
-          // use the original title
           meta.title = issue.title;
           meta.source = 'Sentry';
           meta.type = 'Automated Sentry Report';
