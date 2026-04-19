@@ -75,32 +75,89 @@ export async function sendDailyBugReminder() {
     googleToken,
   );
 
-  for (const [repo, label] of Object.entries(Repositories)) {
-    const bugs = await getCurrentlyActiveBugs(repo, env.GH_TOKEN);
-    if (!bugs) {
+  const rawBugs = await Promise.all(
+    Object.entries(Repositories).map(
+      async ([repo, label]) =>
+        [label, await getCurrentlyActiveBugs(repo, env.GH_TOKEN)] as [
+          string,
+          Bug[] | undefined,
+        ],
+    ),
+  );
+
+  const bugs = rawBugs.reduce(
+    (acc, curr) => {
+      if (!curr[1]) {
+        return acc;
+      }
+
+      acc[curr[0]] = curr[1];
+
+      return acc;
+    },
+    {} as Record<string, Bug[]>,
+  );
+  const bugCount = Object.values(bugs).reduce((acc, curr) => {
+    acc.push(...curr);
+
+    return acc;
+  }).length;
+
+  const text = `*🐛 GLChat Ecosystem Active Bug List*
+
+There are *${bugCount}* of active bugs in GLChat ecosystem per *${formatDate(today)}*${bugCount > 0 ? ':' : ' 🎉'}
+${
+  bugCount
+    ? `
+${Object.entries(bugs)
+  .map(
+    ([label, repo]) =>
+      `- *${label}*, ${repo.length} ${repo.length === 1 ? 'bug' : 'bugs'}`,
+  )
+  .join('\n')}`
+    : ''
+}
+${
+  bugCount
+    ? `
+✅ *Things to do as when assigned to bug(s):*
+
+- Investigate the issue that you've been assigned to.
+- Provide a status update in the issue page.
+- If you can't provide a status update to the issue, please state the reason in this thread.
+`
+    : ''
+}
+🧑 *Today's Bug PIC:*
+
+${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
+
+  const threadStarter = await fetch(
+    `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${googleToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+      }),
+    },
+  );
+
+  const { thread } = (await threadStarter.json()) as {
+    thread: { name: string };
+  };
+  const threadId = thread.name;
+
+  for (const [label, bugList] of Object.entries(bugs)) {
+    if (bugList.length === 0) {
       continue;
     }
 
-    const text = `*🐛 ${label} Active Bug List*
-
-  There are *${bugs.length}* of <https://github.com/GDP-ADMIN/${repo}/issues|currently active bugs in ${label}> per *${formatDate(today)}*${bugs.length > 0 ? '.' : ' 🎉'}
-  ${
-    bugs.length
-      ? `
-  ✅ *Things to do as when assigned to bug(s):*
-
-  - Investigate the issue that you've been assigned to.
-  - Provide a status update in the issue page.
-  - If you can't provide a status update to the issue, please state the reason in this thread.
-  `
-      : ''
-  }
-  🧑 *Today's Bug PIC:*
-
-  ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
-
-    const threadStarter = await fetch(
-      `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages`,
+    await fetch(
+      `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
       {
         method: 'POST',
         headers: {
@@ -108,128 +165,122 @@ export async function sendDailyBugReminder() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text,
+          text: `🐛 _List of bugs for ${label}_`,
+          thread: {
+            name: threadId,
+          },
         }),
       },
     );
 
-    const { thread } = (await threadStarter.json()) as {
-      thread: { name: string };
-    };
+    const issues = await resolveAssignees(
+      bugList,
+      env.DAILY_GOOGLE_SPACE,
+      googleToken,
+    );
 
-    const threadId = thread.name;
-    const chunkedBugs = [...chunkArray(bugs)];
+    await Promise.all(
+      issues.map(async (issue) => {
+        const meta = extractTitleMetadata(issue.title);
 
-    for (const chunk of chunkedBugs) {
-      const issues = await resolveAssignees(
-        chunk,
-        env.DAILY_GOOGLE_SPACE,
-        googleToken,
-      );
+        if (issue.reporter === IssueReporter.Sentry) {
+          meta.title = issue.title;
+          meta.source = 'Sentry';
+          meta.type = 'Automated Sentry Report';
+        }
 
-      await Promise.all(
-        issues.map(async (issue) => {
-          const meta = extractTitleMetadata(issue.title);
+        const issueAge = Math.round(
+          (today.getTime() - new Date(issue.created_at ?? '').getTime()) /
+            (1_000 * 60 * 60 * 24),
+        );
 
-          if (issue.reporter === IssueReporter.Sentry) {
-            meta.title = issue.title;
-            meta.source = 'Sentry';
-            meta.type = 'Automated Sentry Report';
-          }
+        const picDisplay = issue.assignees.filter(Boolean).length
+          ? `cc: ${issue.assignees.map((a) => (a.startsWith('users/') ? `<${a}>` : `\`${a}\``)).join(' ')}`
+          : '⚠️ _Unassigned_';
 
-          const issueAge = Math.round(
-            (today.getTime() - new Date(issue.created_at ?? '').getTime()) /
-              (1_000 * 60 * 60 * 24),
-          );
-
-          const picDisplay = issue.assignees.filter(Boolean).length
-            ? `cc: ${issue.assignees.map((a) => (a.startsWith('users/') ? `<${a}>` : `\`${a}\``)).join(' ')}`
-            : '⚠️ _Unassigned_';
-
-          await fetch(
-            `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${googleToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                text: picDisplay,
-                cardsV2: [
-                  {
-                    cardId: `card-issue-${issue.number}`,
-                    card: {
-                      header: {
-                        title: meta.title,
-                        subtitle: `#${issue.number}`,
-                      },
-                      sections: [
-                        {
-                          collapsible: true,
-                          widgets: [
-                            {
-                              decoratedText: {
-                                topLabel: 'URL',
-                                startIcon: {
-                                  knownIcon: 'EMAIL',
-                                },
-                                text: `<a href="${issue.url}">${issue.url}</a>`,
-                              },
-                            },
-                            {
-                              decoratedText: {
-                                topLabel: 'Source',
-                                startIcon: {
-                                  knownIcon: 'MULTIPLE_PEOPLE',
-                                },
-                                text: meta.source,
-                              },
-                            },
-                            meta.type
-                              ? {
-                                  decoratedText: {
-                                    topLabel: 'Type',
-                                    startIcon: {
-                                      knownIcon: 'DESCRIPTION',
-                                    },
-                                    text: meta.type,
-                                  },
-                                }
-                              : undefined,
-                            {
-                              decoratedText: {
-                                topLabel: 'Created At',
-                                startIcon: {
-                                  knownIcon: 'INVITE',
-                                },
-                                text: `${formatDate(issue.created_at, { weekday: undefined })}`,
-                              },
-                            },
-                            {
-                              decoratedText: {
-                                topLabel: 'Age',
-                                startIcon: {
-                                  knownIcon: 'CLOCK',
-                                },
-                                text: `${issueAge} day(s)`,
-                              },
-                            },
-                          ].filter(Boolean),
-                        },
-                      ],
-                    },
-                  },
-                ],
-                thread: {
-                  name: threadId,
-                },
-              }),
+        await fetch(
+          `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${googleToken}`,
+              'Content-Type': 'application/json',
             },
-          );
-        }),
-      );
-    }
+            body: JSON.stringify({
+              text: picDisplay,
+              cardsV2: [
+                {
+                  cardId: `card-issue-${issue.number}`,
+                  card: {
+                    header: {
+                      title: meta.title,
+                      subtitle: `#${issue.number}`,
+                    },
+                    sections: [
+                      {
+                        collapsible: true,
+                        widgets: [
+                          {
+                            decoratedText: {
+                              topLabel: 'URL',
+                              startIcon: {
+                                knownIcon: 'EMAIL',
+                              },
+                              text: `<a href="${issue.url}">${issue.url}</a>`,
+                            },
+                          },
+                          {
+                            decoratedText: {
+                              topLabel: 'Source',
+                              startIcon: {
+                                knownIcon: 'MULTIPLE_PEOPLE',
+                              },
+                              text: meta.source,
+                            },
+                          },
+                          meta.type
+                            ? {
+                                decoratedText: {
+                                  topLabel: 'Type',
+                                  startIcon: {
+                                    knownIcon: 'DESCRIPTION',
+                                  },
+                                  text: meta.type,
+                                },
+                              }
+                            : undefined,
+                          {
+                            decoratedText: {
+                              topLabel: 'Created At',
+                              startIcon: {
+                                knownIcon: 'INVITE',
+                              },
+                              text: `${formatDate(issue.created_at, { weekday: undefined })}`,
+                            },
+                          },
+                          {
+                            decoratedText: {
+                              topLabel: 'Age',
+                              startIcon: {
+                                knownIcon: 'CLOCK',
+                              },
+                              text: `${issueAge} day(s)`,
+                            },
+                          },
+                        ].filter(Boolean),
+                      },
+                    ],
+                  },
+                },
+              ],
+              thread: {
+                name: threadId,
+              },
+            }),
+          },
+        );
+      }),
+    );
   }
 }
 
