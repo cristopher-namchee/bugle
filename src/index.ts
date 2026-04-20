@@ -48,6 +48,8 @@ app.get('/', async (c) => {
       body: JSON.stringify({ ref: 'main' }),
     },
   );
+
+  return c.json({});
 });
 
 export default {
