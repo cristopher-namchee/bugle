@@ -13,3 +13,7 @@ export interface IssueMetadata {
   source: string;
   type?: string;
 }
+
+export interface Env {
+  GITHUB_TOKEN: string;
+}
