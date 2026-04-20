@@ -105,7 +105,7 @@ export async function sendDailyBugReminder() {
 
   const text = `*🐛 GLChat Ecosystem Active Bug List*
 
-There are *${bugCount}* of active bugs in GLChat ecosystem per *${formatDate(today)}*${bugCount > 0 ? ':' : ' 🎉'}
+There are *${bugCount}* active ${bugCount === 1 ? 'bug' : 'bugs'} in GLChat ecosystem per *${formatDate(today)}*${bugCount > 0 ? ':' : ' 🎉'}
 ${
   bugCount
     ? `
@@ -120,10 +120,10 @@ ${Object.entries(bugs)
 ${
   bugCount
     ? `
-✅ *Things to do as when assigned to bug(s):*
+✅ *Things to do as when assigned to a bug:*
 
 - Investigate the issue that you've been assigned to.
-- Provide a status update in the issue page.
+- Provide a status update on the issue page.
 - If you can't provide a status update to the issue, please state the reason in this thread.
 `
     : ''
