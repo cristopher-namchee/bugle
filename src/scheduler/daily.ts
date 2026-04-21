@@ -132,9 +132,6 @@ ${
 
 ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
 
-  console.log(bugCount, text);
-
-  /*
   const threadStarter = await fetch(
     `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages`,
     {
@@ -285,7 +282,6 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
       }),
     );
   }
-  */
 }
 
 (async () => {
