@@ -97,11 +97,11 @@ export async function sendDailyBugReminder() {
     },
     {} as Record<string, Bug[]>,
   );
-  const bugCount = Object.values(bugs).reduce((acc, curr) => {
-    acc.push(...curr);
 
-    return acc;
-  }).length;
+  const bugCount = Object.values(bugs).reduce(
+    (acc, curr) => acc + curr.length,
+    0,
+  );
 
   const text = `*🐛 GLChat Ecosystem Active Bug List*
 
@@ -111,8 +111,8 @@ ${
     ? `
 ${Object.entries(bugs)
   .map(
-    ([label, repo]) =>
-      `- *${label}*, ${repo.length} ${repo.length === 1 ? 'bug' : 'bugs'}`,
+    ([label, bugs]) =>
+      `- *${label}*, ${bugs.length} ${bugs.length === 1 ? 'bug' : 'bugs'}`,
   )
   .join('\n')}`
     : ''
@@ -132,6 +132,9 @@ ${
 
 ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
 
+  console.log(bugCount, text);
+
+  /*
   const threadStarter = await fetch(
     `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages`,
     {
@@ -282,6 +285,7 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
       }),
     );
   }
+  */
 }
 
 (async () => {
