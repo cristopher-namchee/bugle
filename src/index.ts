@@ -2,7 +2,7 @@ import type { Env } from './types';
 
 const schedules: Record<string, (env: Env) => Promise<void>> = {
   '0 3 * * *': async (env: Env) => {
-    await fetch(
+    const response = await fetch(
       'https://api.github.com/repos/cristopher-namchee/bugle/actions/workflows/daily.yml/dispatches',
       {
         method: 'POST',
@@ -14,9 +14,13 @@ const schedules: Record<string, (env: Env) => Promise<void>> = {
         body: JSON.stringify({ ref: 'main' }),
       },
     );
+
+    const body = await response.json();
+
+    console.log(body);
   },
   '0 8 * * 6': async (env: Env) => {
-    await fetch(
+    const response = await fetch(
       'https://api.github.com/repos/cristopher-namchee/bugle/actions/workflows/weekly.yml/dispatches',
       {
         method: 'POST',
@@ -28,6 +32,10 @@ const schedules: Record<string, (env: Env) => Promise<void>> = {
         body: JSON.stringify({ ref: 'main' }),
       },
     );
+
+    const body = await response.json();
+
+    console.log(body);
   },
 };
 
