@@ -43,6 +43,8 @@ const schedules: Record<string, (env: Env) => Promise<void>> = {
 const app = new Hono<{ Bindings: Env }>();
 
 app.get('/', async (c) => {
+  let status = 200;
+
   try {
     const response = await fetch(
       'https://api.github.com/repos/cristopher-namchee/bugle/actions/workflows/daily.yml/dispatches',
@@ -56,13 +58,15 @@ app.get('/', async (c) => {
         body: JSON.stringify({ ref: 'main' }),
       },
     );
-
+    
+    status = response.status;
     const body = await response.json();
 
     return c.json(body);
   } catch (err) {
     return c.json(
       {
+        status,
         err,
       },
       { status: 400 },
