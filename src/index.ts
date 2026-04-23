@@ -61,9 +61,12 @@ app.get('/', async (c) => {
 
     return c.json(body);
   } catch (err) {
-    return c.json({
-      err,
-    }, { status: 400 });
+    return c.json(
+      {
+        err,
+      },
+      { status: 400 },
+    );
   }
 });
 
