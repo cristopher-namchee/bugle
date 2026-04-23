@@ -1,3 +1,4 @@
+import { Hono } from 'hono';
 import type { Env } from './types';
 
 const schedules: Record<string, (env: Env) => Promise<void>> = {
@@ -39,7 +40,38 @@ const schedules: Record<string, (env: Env) => Promise<void>> = {
   },
 };
 
+const app = new Hono<{ Bindings: Env }>();
+
+app.get('/', async (c) => {
+  try {
+    const response = await fetch(
+      'https://api.github.com/repos/cristopher-namchee/bugle/actions/workflows/daily.yml/dispatches',
+      {
+        method: 'POST',
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: `Bearer ${c.env.GITHUB_TOKEN}`,
+          'X-GitHub-Api-Version': '2026-03-10',
+        },
+        body: JSON.stringify({ ref: 'main' }),
+      },
+    );
+
+    const body = await response.json();
+
+    return c.json(body);
+  } catch (err) {
+    return c.json(
+      {
+        err,
+      },
+      { status: 400 },
+    );
+  }
+});
+
 export default {
+  fetch: app.fetch,
   scheduled: async (
     ctrl: ScheduledController,
     env: Env,
