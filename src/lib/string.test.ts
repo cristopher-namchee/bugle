@@ -54,4 +54,42 @@ describe('extractTitleMetadata', () => {
     expect(result.source).toBe('AVA Feedback');
     expect(result.type).toBe('Prompt / result issue');
   });
+
+  it('should not separate non-dash in the title', () => {
+    const title = 'User is Half-Stuck on Guest Mode after Fresh Install';
+
+    const result = extractTitleMetadata(title);
+
+    expect(result.title).toBe(
+      'User is Half-Stuck on Guest Mode after Fresh Install',
+    );
+    expect(result.source).toBe('Manual Report');
+    expect(result.type).toBeUndefined();
+  });
+
+  it('should not separate non-dash in the title, with custom source', () => {
+    const title =
+      '[GLoria Feedback] User is Half-Stuck on Guest Mode after Fresh Install';
+
+    const result = extractTitleMetadata(title);
+
+    expect(result.title).toBe(
+      'User is Half-Stuck on Guest Mode after Fresh Install',
+    );
+    expect(result.source).toBe('GLoria Feedback');
+    expect(result.type).toBeUndefined();
+  });
+
+  it('should not confuse dash that separate type with actual text, with custom source', () => {
+    const title =
+      '[GLoria Feedback] User Feed-back - User is Half-Stuck on Guest Mode after Fresh Install';
+
+    const result = extractTitleMetadata(title);
+
+    expect(result.title).toBe(
+      'User is Half-Stuck on Guest Mode after Fresh Install',
+    );
+    expect(result.source).toBe('GLoria Feedback');
+    expect(result.type).toBe('User Feed-back');
+  });
 });

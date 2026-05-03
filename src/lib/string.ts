@@ -9,7 +9,7 @@ import type { IssueMetadata } from '@/types';
  */
 export function extractTitleMetadata(title: string): IssueMetadata {
   const metadata: IssueMetadata = {
-    title,
+    title: title.trim(),
     source: 'Manual Report',
   };
   const source = metadata.title.match(/^\[(.+?)\]/);
@@ -22,7 +22,7 @@ export function extractTitleMetadata(title: string): IssueMetadata {
     metadata.title = metadata.title.slice(1).trim();
   }
 
-  const type = metadata.title.match(/^(.+?)-/);
+  const type = metadata.title.match(/^(.+?)\s+-/);
   if (type) {
     metadata.type = type[1].trim();
     metadata.title = metadata.title.replace(type[0], '').slice(1).trim();
