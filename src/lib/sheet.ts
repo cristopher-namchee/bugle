@@ -50,7 +50,10 @@ interface Employee {
   email: string;
 }
 
-type ShiftData = [Employee, Employee, Employee, Employee, Employee];
+interface ShiftData {
+  pics: [Employee, Employee, Employee, Employee, Employee];
+  holiday: boolean;
+}
 
 export async function getSchedule(date: Date): Promise<ShiftData | null> {
   const env = process.env;
@@ -76,6 +79,8 @@ export async function getSchedule(date: Date): Promise<ShiftData | null> {
     if (body.status === 'failed') {
       throw new Error(body.message);
     }
+
+    console.log(body.data);
 
     return body.data;
   } catch (err) {

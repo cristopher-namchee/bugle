@@ -46,8 +46,8 @@ export async function sendDailyBugReminder() {
 
   const today = new Date();
 
-  const pics = await getSchedule(today);
-  if (!pics) {
+  const schedule = await getSchedule(today);
+  if (!schedule) {
     console.error('Schedule data is empty');
 
     await fetch(
@@ -68,6 +68,8 @@ export async function sendDailyBugReminder() {
 
     return;
   }
+
+  const { pics } = schedule;
 
   const dailyBugPic = await getUserIdByEmail(
     pics[0].email,
