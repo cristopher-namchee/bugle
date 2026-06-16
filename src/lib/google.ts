@@ -1,4 +1,4 @@
-import { JWT } from '@/const';
+import { JWT, Spreadsheet } from '@/const';
 
 interface GoogleAuthResponse {
   access_token: string;
@@ -35,7 +35,7 @@ interface CardHeader {
 
 interface CardSection {
   header?: string;
-  widgets: Widget[];
+  widgets?: (Widget | undefined)[];
   collapsible?: boolean;
   uncollapsibleWidgetsCount?: number;
 }
@@ -344,7 +344,7 @@ export async function sendMessageToThread(
 ): Promise<MessageResponse | null> {
   try {
     const response = await fetch(
-      `https://chat.googleapis.com/v1/spaces/${channel}/messages`,
+      `https://chat.googleapis.com/v1/spaces/${channel}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
       {
         method: 'POST',
         headers: {
@@ -374,5 +374,79 @@ export async function sendMessageToThread(
     );
 
     return null;
+  }
+}
+
+async function getBugReport(token: string): Promise<BugReportResponse> {
+  try {
+    const baseUrl = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values:batchGet`;
+    const url = new URL(baseUrl);
+
+    const ranges = [
+      `${Spreadsheet.Bug.Name}!B5:B7`, // Internal Open
+      `${Spreadsheet.Bug.Name}!D5:D7`, // External Open
+      `${Spreadsheet.Bug.Name}!B10:B13`, // Internal Closed
+      `${Spreadsheet.Bug.Name}!D10:D13`, // External Closed
+    ];
+
+    // Append ranges to URL query parameters
+    ranges.forEach((range) => {
+      url.searchParams.append('ranges', range);
+    });
+    url.searchParams.append('valueRenderOption', 'UNFORMATTED_VALUE');
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Google Sheets API error: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const result: SheetsBatchGetResponse = await response.json();
+    const valueRanges = result.valueRanges;
+
+    if (!valueRanges || valueRanges.length < 4) {
+      throw new Error(
+        `Sheet "${targetSheet}" not found or failed to return requested ranges.`,
+      );
+    }
+
+    // Helper to safely flatten Google's 2D array structure down to a 1D array of numbers
+    const extractNumbers = (valueRange: (typeof valueRanges)[0]): number[] => {
+      // Default to empty array if the range itself is empty in the sheet
+      const rows = valueRange.values || [];
+      return rows.flat().map((val) => {
+        const num = Number(val);
+        if (Number.isNaN(num)) {
+          throw new Error(`Encountered invalid non-numeric data of ${val}`);
+        }
+        return num;
+      });
+    };
+
+    const internalOpen = extractNumbers(valueRanges[0]);
+    const externalOpen = extractNumbers(valueRanges[1]);
+    const internalClosed = extractNumbers(valueRanges[2]);
+    const externalClosed = extractNumbers(valueRanges[3]);
+
+    return {
+      data: {
+        internal: { open: internalOpen, closed: internalClosed },
+        external: { open: externalOpen, closed: externalClosed },
+      },
+      error: null,
+    };
+  } catch (error) {
+    return {
+      data: null,
+      error,
+    };
   }
 }

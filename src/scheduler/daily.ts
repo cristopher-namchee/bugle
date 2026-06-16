@@ -2,7 +2,12 @@ import { IssueReporter, Repositories } from '@/const';
 import { chunkArray } from '@/lib/array';
 import { formatDate } from '@/lib/date';
 import { getCurrentlyActiveBugs } from '@/lib/github';
-import { getGoogleAuthToken, getUserIdByEmail } from '@/lib/google';
+import {
+  getGoogleAuthToken,
+  getUserIdByEmail,
+  sendMessage,
+  sendMessageToThread,
+} from '@/lib/google';
 
 import { getSchedule } from '@/lib/sheet';
 import { extractTitleMetadata } from '@/lib/string';
@@ -50,21 +55,11 @@ export async function sendDailyBugReminder() {
   if (!schedule) {
     console.error('Schedule data is empty');
 
-    await fetch(
-      `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${googleToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `*🐛 GLChat Active Bug List*
+    await sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
+      text: `*🐛 GLChat Active Bug List*
 
 ⚠️ _Failed to process daily bug report. Please check the execution log._`,
-        }),
-      },
-    );
+    });
 
     return;
   }
@@ -134,46 +129,22 @@ ${
 
 ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
 
-  const threadStarter = await fetch(
-    `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${googleToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text,
-      }),
-    },
-  );
-
-  const { thread } = (await threadStarter.json()) as {
-    thread: { name: string };
-  };
-  const threadId = thread.name;
+  const threadStarter = await sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
+    text,
+  });
+  if (!threadStarter) {
+    return;
+  }
+  const threadId = threadStarter.thread.name;
 
   for (const [label, bugList] of Object.entries(bugs)) {
     if (bugList.length === 0) {
       continue;
     }
 
-    await fetch(
-      `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${googleToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `🐛 _List of bugs for ${label}_`,
-          thread: {
-            name: threadId,
-          },
-        }),
-      },
-    );
+    await sendMessageToThread(googleToken, env.DAILY_GOOGLE_SPACE, threadId, {
+      text: `🐛 _List of bugs for ${label}_`,
+    });
 
     const issues = await resolveAssignees(
       bugList,
@@ -200,85 +171,77 @@ ${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
           ? `cc: ${issue.assignees.map((a) => (a.startsWith('users/') ? `<${a}>` : `\`${a}\``)).join(' ')}`
           : '⚠️ _Unassigned_';
 
-        await fetch(
-          `https://chat.googleapis.com/v1/spaces/${env.DAILY_GOOGLE_SPACE}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
+        await sendMessageToThread(
+          googleToken,
+          env.DAILY_GOOGLE_SPACE,
+          threadId,
           {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${googleToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              text: picDisplay,
-              cardsV2: [
-                {
-                  cardId: `card-issue-${issue.number}`,
-                  card: {
-                    header: {
-                      title: meta.title,
-                      subtitle: `#${issue.number}`,
-                    },
-                    sections: [
-                      {
-                        collapsible: true,
-                        widgets: [
-                          {
-                            decoratedText: {
-                              topLabel: 'URL',
-                              startIcon: {
-                                knownIcon: 'EMAIL',
-                              },
-                              text: `<a href="${issue.url}">${issue.url}</a>`,
-                            },
-                          },
-                          {
-                            decoratedText: {
-                              topLabel: 'Source',
-                              startIcon: {
-                                knownIcon: 'MULTIPLE_PEOPLE',
-                              },
-                              text: meta.source,
-                            },
-                          },
-                          meta.type
-                            ? {
-                                decoratedText: {
-                                  topLabel: 'Type',
-                                  startIcon: {
-                                    knownIcon: 'DESCRIPTION',
-                                  },
-                                  text: meta.type,
-                                },
-                              }
-                            : undefined,
-                          {
-                            decoratedText: {
-                              topLabel: 'Created At',
-                              startIcon: {
-                                knownIcon: 'INVITE',
-                              },
-                              text: `${formatDate(issue.created_at, { weekday: undefined })}`,
-                            },
-                          },
-                          {
-                            decoratedText: {
-                              topLabel: 'Age',
-                              startIcon: {
-                                knownIcon: 'CLOCK',
-                              },
-                              text: `${issueAge} day(s)`,
-                            },
-                          },
-                        ].filter(Boolean),
-                      },
-                    ],
+            text: picDisplay,
+            cardsV2: [
+              {
+                cardId: `card-issue-${issue.number}`,
+                card: {
+                  header: {
+                    title: meta.title,
+                    subtitle: `#${issue.number}`,
                   },
+                  sections: [
+                    {
+                      collapsible: true,
+                      widgets: [
+                        {
+                          decoratedText: {
+                            topLabel: 'URL',
+                            startIcon: {
+                              knownIcon: 'EMAIL',
+                            },
+                            text: `<a href="${issue.url}">${issue.url}</a>`,
+                          },
+                        },
+                        {
+                          decoratedText: {
+                            topLabel: 'Source',
+                            startIcon: {
+                              knownIcon: 'MULTIPLE_PEOPLE',
+                            },
+                            text: meta.source,
+                          },
+                        },
+                        meta.type
+                          ? {
+                              decoratedText: {
+                                topLabel: 'Type',
+                                startIcon: {
+                                  knownIcon: 'DESCRIPTION',
+                                },
+                                text: meta.type,
+                              },
+                            }
+                          : undefined,
+                        {
+                          decoratedText: {
+                            topLabel: 'Created At',
+                            startIcon: {
+                              knownIcon: 'INVITE',
+                            },
+                            text: `${formatDate(issue.created_at, { weekday: undefined })}`,
+                          },
+                        },
+                        {
+                          decoratedText: {
+                            topLabel: 'Age',
+                            startIcon: {
+                              knownIcon: 'CLOCK',
+                            },
+                            text: `${issueAge} day(s)`,
+                          },
+                        },
+                      ].filter(Boolean),
+                    },
+                  ],
                 },
-              ],
-              thread: {
-                name: threadId,
               },
-            }),
+            ],
           },
         );
       }),

@@ -26,3 +26,11 @@ export const Repositories: Record<string, string> = {
 };
 
 export const DefaultChunkSize = 5;
+
+export const Spreadsheet = {
+  Bug: {
+    ID: '1ZGlbEKvVqaP4BL2a81sKSHaBJw11cYxkyKQpCPdPV7A',
+    Name: 'REPORT',
+  },
+  AIP: '1cs1OThqveeEb0cQPOcjsZGwewc6nuFargQ9DPL0UmqE',
+};
