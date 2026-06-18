@@ -167,6 +167,12 @@ interface AIPReport {
   scenario: Record<string, [string, string]>;
 }
 
+interface SheetsValueResponse {
+  range: string;
+  majorDimension: string;
+  values?: any[][];
+}
+
 function b64(input: ArrayBuffer | string) {
   const bytes =
     typeof input === 'string'
@@ -573,6 +579,37 @@ export async function getAIPReport(token: string): Promise<AIPReport | null> {
     };
   } catch (err) {
     console.error('Failed to get AIP report:', err);
+
+    return null;
+  }
+}
+
+export async function getPerformanceReport(
+  token: string,
+): Promise<string[] | null> {
+  try {
+    const range = `${Spreadsheet.Bug.Name}!K27:K30`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values/${encodeURIComponent(range)}?valueRenderOption=UNFORMATTED_VALUE`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Google Sheets API error: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const result: SheetsValueResponse = await response.json();
+
+    return result.values ? result.values.flat() : [];
+  } catch (err) {
+    console.error(err);
 
     return null;
   }

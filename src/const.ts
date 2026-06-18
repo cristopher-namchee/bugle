@@ -9,6 +9,7 @@ export const JWT = {
     'https://www.googleapis.com/auth/chat.messages.create',
     'https://www.googleapis.com/auth/chat.messages',
     'https://www.googleapis.com/auth/chat.memberships',
+    'https://www.googleapis.com/auth/spreadsheets.readonly',
   ],
   Algorithm: 'RS256',
   Grant: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
