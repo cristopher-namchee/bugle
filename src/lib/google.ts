@@ -132,6 +132,41 @@ interface MessageResponse {
   };
 }
 
+interface SheetsBatchGetResponse {
+  valueRanges?: {
+    range: string;
+    majorDimension: string;
+    values?: unknown[][];
+  }[];
+}
+
+interface BugAggregate {
+  open: number[];
+  closed: number[];
+}
+
+interface BugReport {
+  internal: BugAggregate;
+  external: BugAggregate;
+}
+
+interface SpreadsheetMetadataResponse {
+  sheets: {
+    properties: {
+      title: string;
+      gridProperties: {
+        rowCount: number;
+      };
+    };
+  }[];
+}
+
+interface AIPReport {
+  model: string;
+  users: number;
+  scenario: Record<string, [string, string]>;
+}
+
 function b64(input: ArrayBuffer | string) {
   const bytes =
     typeof input === 'string'
@@ -377,7 +412,7 @@ export async function sendMessageToThread(
   }
 }
 
-async function getBugReport(token: string): Promise<BugReportResponse> {
+export async function getBugReport(token: string): Promise<BugReport | null> {
   try {
     const baseUrl = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values:batchGet`;
     const url = new URL(baseUrl);
@@ -389,7 +424,6 @@ async function getBugReport(token: string): Promise<BugReportResponse> {
       `${Spreadsheet.Bug.Name}!D10:D13`, // External Closed
     ];
 
-    // Append ranges to URL query parameters
     ranges.forEach((range) => {
       url.searchParams.append('ranges', range);
     });
@@ -414,19 +448,18 @@ async function getBugReport(token: string): Promise<BugReportResponse> {
 
     if (!valueRanges || valueRanges.length < 4) {
       throw new Error(
-        `Sheet "${targetSheet}" not found or failed to return requested ranges.`,
+        `Sheet "${Spreadsheet.Bug.ID}:${Spreadsheet.Bug.Name}" not found or failed to return requested ranges.`,
       );
     }
 
-    // Helper to safely flatten Google's 2D array structure down to a 1D array of numbers
     const extractNumbers = (valueRange: (typeof valueRanges)[0]): number[] => {
-      // Default to empty array if the range itself is empty in the sheet
       const rows = valueRange.values || [];
       return rows.flat().map((val) => {
         const num = Number(val);
         if (Number.isNaN(num)) {
           throw new Error(`Encountered invalid non-numeric data of ${val}`);
         }
+
         return num;
       });
     };
@@ -437,16 +470,110 @@ async function getBugReport(token: string): Promise<BugReportResponse> {
     const externalClosed = extractNumbers(valueRanges[3]);
 
     return {
-      data: {
-        internal: { open: internalOpen, closed: internalClosed },
-        external: { open: externalOpen, closed: externalClosed },
+      internal: { open: internalOpen, closed: internalClosed },
+      external: { open: externalOpen, closed: externalClosed },
+    };
+  } catch (err) {
+    console.error('Faled to fetch bug aggregation data:', err);
+
+    return null;
+  }
+}
+
+export async function getAIPReport(token: string): Promise<AIPReport | null> {
+  try {
+    const baseHeaders = {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+    };
+
+    const metaRes = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.AIP}?fields=sheets(properties)`,
+      {
+        method: 'GET',
+        headers: baseHeaders,
       },
-      error: null,
-    };
-  } catch (error) {
+    );
+    if (!metaRes.ok) {
+      throw new Error(`Metadata fetch failed: ${metaRes.statusText}`);
+    }
+
+    const metaData: SpreadsheetMetadataResponse = await metaRes.json();
+    const sheetsMeta = metaData.sheets;
+
+    if (!sheetsMeta || sheetsMeta.length < 2) {
+      throw new Error('Spreadsheet does not have enough sheets.');
+    }
+
+    const secondLastSheetMeta = sheetsMeta[sheetsMeta.length - 2].properties;
+    const lastSheetMeta = sheetsMeta[sheetsMeta.length - 1].properties;
+
+    const secondLastTitle = secondLastSheetMeta.title;
+    const lastTitle = lastSheetMeta.title;
+    const lastSheetMaxRows = lastSheetMeta.gridProperties.rowCount;
+
+    const dataUrl = new URL(
+      `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.AIP}/values:batchGet`,
+    );
+    dataUrl.searchParams.append('ranges', `${secondLastTitle}!A1:D`);
+    dataUrl.searchParams.append(
+      'ranges',
+      `${lastTitle}!A${lastSheetMaxRows - 20}:D${lastSheetMaxRows}`,
+    );
+    dataUrl.searchParams.append('valueRenderOption', 'UNFORMATTED_VALUE');
+
+    const dataRes = await fetch(dataUrl.toString(), {
+      method: 'GET',
+      headers: baseHeaders,
+    });
+    if (!dataRes.ok) {
+      throw new Error(
+        `Failed to fetch values from AIP sheet: ${dataRes.statusText}`,
+      );
+    }
+
+    const dataPayload: SheetsBatchGetResponse = await dataRes.json();
+    const valueRanges = dataPayload.valueRanges || [];
+
+    const modelValues = valueRanges[1]?.values || [];
+    if (modelValues.length === 0) {
+      throw new Error(`The model sheet "${lastTitle}" appears to be empty.`);
+    }
+    const lastRowData = modelValues[modelValues.length - 1];
+    const model = lastRowData[0]?.toString() || '';
+    const users = Number(lastRowData[3] || 0);
+
+    const scenarioValues = valueRanges[0]?.values || [];
+    const scenario: Record<string, [string, string]> = {};
+
+    for (let idx = 1; idx < scenarioValues.length; idx += 10) {
+      const rowItem = scenarioValues[idx - 1];
+      if (!rowItem || !rowItem[0]) {
+        continue;
+      }
+
+      const rawNameString = rowItem[0].toString();
+      const splitParts = rawNameString.split('\n');
+      const scenarioName = splitParts[1] ? splitParts[1] : splitParts[0];
+
+      const targetRow = scenarioValues[idx - 1 + 7];
+      const ttft = targetRow ? String(targetRow[2]) : '';
+
+      const targetRawString = targetRow[3]?.toString() ?? '';
+      const matchResult = targetRawString.match(/(\d+s)/);
+      const target = matchResult ? matchResult[1] : '';
+
+      scenario[scenarioName] = [ttft, target];
+    }
+
     return {
-      data: null,
-      error,
+      model,
+      users,
+      scenario,
     };
+  } catch (err) {
+    console.error('Failed to get AIP report:', err);
+
+    return null;
   }
 }
