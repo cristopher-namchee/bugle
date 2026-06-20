@@ -10,7 +10,7 @@ import {
   vi,
 } from 'vitest';
 import { Spreadsheet } from '@/const';
-import { getBugReport, getPerformanceReport } from './sheet';
+import { getAIPReport, getBugReport, getPerformanceReport } from './sheet';
 
 const mockServer = setupServer();
 
@@ -272,6 +272,164 @@ describe('getPerformanceReport', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await getPerformanceReport(mockToken);
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('getAIPReport', () => {
+  beforeAll(async () => {
+    mockServer.listen();
+  });
+
+  afterEach(() => {
+    mockServer.resetHandlers();
+    vi.resetAllMocks();
+  });
+
+  afterAll(() => {
+    mockServer.close();
+  });
+
+  const mockToken = 'mock-aip-token';
+  const metaUrl = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.AIP}`;
+  const batchGetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.AIP}/values:batchGet`;
+
+  it('should successfully fetch metadata, dynamic sheets, and process scenario data', async () => {
+    mockServer.use(
+      http.get(metaUrl, ({ request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.get('fields')).toBe('sheets(properties)');
+        expect(request.headers.get('Authorization')).toBe(
+          `Bearer ${mockToken}`,
+        );
+
+        return HttpResponse.json({
+          sheets: [
+            { properties: { title: 'IrrelevantSheet1' } },
+            { properties: { title: 'ScenarioSheet' } },
+            { properties: { title: 'ModelSheet' } },
+          ],
+        });
+      }),
+    );
+
+    mockServer.use(
+      http.get(batchGetUrl, ({ request }) => {
+        const url = new URL(request.url);
+        expect(url.searchParams.getAll('ranges')).toEqual([
+          'ScenarioSheet!A1:D',
+          'ModelSheet!A:D',
+        ]);
+        expect(url.searchParams.get('valueRenderOption')).toBe(
+          'UNFORMATTED_VALUE',
+        );
+
+        return HttpResponse.json({
+          valueRanges: [
+            {
+              // Scenario values (index 0)
+              range: 'ScenarioSheet!A1:D',
+              majorDimension: 'ROWS',
+              values: [
+                ['Header\nTargetScenarioName'],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [],
+                [null, null, '0.25s', 'Target: 5s limit'],
+              ],
+            },
+            {
+              // Model values (index 1)
+              range: 'ModelSheet!A:D',
+              majorDimension: 'ROWS',
+              values: [['GPT-4o', null, null, 150]],
+            },
+          ],
+        });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getAIPReport(mockToken);
+
+    expect(result).toEqual({
+      model: 'GPT-4o',
+      users: 150,
+      scenario: {
+        TargetScenarioName: ['0.25s', '5s'],
+      },
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should return null and log an error if metadata fetch fails', async () => {
+    mockServer.use(
+      http.get(metaUrl, () => {
+        return new HttpResponse(null, {
+          status: 400,
+          statusText: 'Bad Request',
+        });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getAIPReport(mockToken);
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0]).toContain('Failed to get AIP report:');
+  });
+
+  it('should return null if the spreadsheet has fewer than 2 sheets', async () => {
+    mockServer.use(
+      http.get(metaUrl, () => {
+        return HttpResponse.json({
+          sheets: [{ properties: { title: 'OnlyOneSheet' } }],
+        });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getAIPReport(mockToken);
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+  });
+
+  it('should return null and log an error if the model sheet payload is completely empty', async () => {
+    mockServer.use(
+      http.get(metaUrl, () => {
+        return HttpResponse.json({
+          sheets: [
+            { properties: { title: 'ScenarioSheet' } },
+            { properties: { title: 'ModelSheet' } },
+          ],
+        });
+      }),
+    );
+
+    mockServer.use(
+      http.get(batchGetUrl, () => {
+        return HttpResponse.json({
+          valueRanges: [
+            { range: 'ScenarioSheet!A1:D', majorDimension: 'ROWS', values: [] },
+            { range: 'ModelSheet!A:D', majorDimension: 'ROWS', values: [] },
+          ],
+        });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getAIPReport(mockToken);
 
     expect(result).toBeNull();
     expect(spy).toHaveBeenCalledOnce();
