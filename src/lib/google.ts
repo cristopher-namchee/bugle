@@ -511,21 +511,17 @@ export async function getAIPReport(token: string): Promise<AIPReport | null> {
       throw new Error('Spreadsheet does not have enough sheets.');
     }
 
-    const secondLastSheetMeta = sheetsMeta[sheetsMeta.length - 2].properties;
+    const benchmarkMeta = sheetsMeta[sheetsMeta.length - 2].properties;
     const lastSheetMeta = sheetsMeta[sheetsMeta.length - 1].properties;
 
-    const secondLastTitle = secondLastSheetMeta.title;
+    const secondLastTitle = benchmarkMeta.title;
     const lastTitle = lastSheetMeta.title;
-    const lastSheetMaxRows = lastSheetMeta.gridProperties.rowCount;
 
     const dataUrl = new URL(
       `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.AIP}/values:batchGet`,
     );
     dataUrl.searchParams.append('ranges', `${secondLastTitle}!A1:D`);
-    dataUrl.searchParams.append(
-      'ranges',
-      `${lastTitle}!A${lastSheetMaxRows - 20}:D${lastSheetMaxRows}`,
-    );
+    dataUrl.searchParams.append('ranges', `${lastTitle}!A:D`);
     dataUrl.searchParams.append('valueRenderOption', 'UNFORMATTED_VALUE');
 
     const dataRes = await fetch(dataUrl.toString(), {
