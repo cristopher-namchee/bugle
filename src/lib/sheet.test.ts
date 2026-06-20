@@ -10,7 +10,7 @@ import {
   vi,
 } from 'vitest';
 import { Spreadsheet } from '@/const';
-import { getBugReport } from './sheet';
+import { getBugReport, getPerformanceReport } from './sheet';
 
 const mockServer = setupServer();
 
@@ -161,6 +161,117 @@ describe('getBugReport', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const result = await getBugReport(mockToken);
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('getPerformanceReport', () => {
+  beforeAll(async () => {
+    mockServer.listen();
+  });
+
+  afterEach(() => {
+    mockServer.resetHandlers();
+    vi.resetAllMocks();
+  });
+
+  afterAll(() => {
+    mockServer.close();
+  });
+
+  const mockToken = 'mock-perf-token';
+  const expectedRange = `${Spreadsheet.Bug.Name}!K27:K30`;
+  const targetUrl = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values/${encodeURIComponent(expectedRange)}`;
+
+  it('should successfully fetch, flatten, and return the performance report values', async () => {
+    mockServer.use(
+      http.get(targetUrl, ({ request }) => {
+        const url = new URL(request.url);
+
+        expect(url.searchParams.get('valueRenderOption')).toBe(
+          'UNFORMATTED_VALUE',
+        );
+        expect(request.headers.get('Authorization')).toBe(
+          `Bearer ${mockToken}`,
+        );
+
+        return HttpResponse.json({
+          range: expectedRange,
+          majorDimension: 'ROWS',
+          values: [
+            ['99.9% Uptime'],
+            ['p99: 120ms'],
+            ['Error Rate: 0.01%'],
+            ['Throughput: 5k/s'],
+          ],
+        });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getPerformanceReport(mockToken);
+
+    expect(result).toEqual([
+      '99.9% Uptime',
+      'p99: 120ms',
+      'Error Rate: 0.01%',
+      'Throughput: 5k/s',
+    ]);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should return an empty array if the values field is missing from the response', async () => {
+    mockServer.use(
+      http.get(targetUrl, () => {
+        return HttpResponse.json({
+          range: expectedRange,
+          majorDimension: 'ROWS',
+        });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getPerformanceReport(mockToken);
+
+    expect(result).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should return null and log the error when the Sheets API returns a non-200 status', async () => {
+    mockServer.use(
+      http.get(targetUrl, () => {
+        return new HttpResponse(null, {
+          status: 500,
+          statusText: 'Internal Server Error',
+        });
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getPerformanceReport(mockToken);
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0].message).toContain(
+      'Google Sheets API error: 500',
+    );
+  });
+
+  it('should return null and log the error if a complete network failure happens', async () => {
+    mockServer.use(
+      http.get(targetUrl, () => {
+        return HttpResponse.error();
+      }),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await getPerformanceReport(mockToken);
 
     expect(result).toBeNull();
     expect(spy).toHaveBeenCalledOnce();
