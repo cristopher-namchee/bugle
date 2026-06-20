@@ -1,5 +1,4 @@
 import { IssueReporter, Repositories } from '@/const';
-import { chunkArray } from '@/lib/array';
 import { formatDate } from '@/lib/date';
 import { getCurrentlyActiveBugs } from '@/lib/github';
 import {
@@ -8,8 +7,8 @@ import {
   sendMessage,
   sendMessageToThread,
 } from '@/lib/google';
+import { getBugReportPIC } from '@/lib/schedule';
 
-import { getSchedule } from '@/lib/sheet';
 import { extractTitleMetadata } from '@/lib/string';
 
 import type { Bug } from '@/types';
@@ -17,18 +16,12 @@ import type { Bug } from '@/types';
 function resolveAssignees(bugs: Bug[], space: string, token: string) {
   return Promise.all(
     bugs.map(async (bug) => {
-      const assignees: string[] = [];
-
-      for (const assigneeChunk of chunkArray(bug.assignees)) {
-        const resolved = await Promise.all(
-          assigneeChunk.map(async (assignee) => {
-            const userId = await getUserIdByEmail(assignee, space, token);
-            return userId ?? assignee;
-          }),
-        );
-
-        assignees.push(...resolved);
-      }
+      const assignees: string[] = await Promise.all(
+        bug.assignees.map(async (assignee) => {
+          const userId = await getUserIdByEmail(assignee, space, token);
+          return userId ?? assignee;
+        }),
+      );
 
       return {
         ...bug,
@@ -51,8 +44,8 @@ export async function sendDailyBugReminder() {
 
   const today = new Date();
 
-  const schedule = await getSchedule(today);
-  if (!schedule) {
+  const rawPIC = await getBugReportPIC(today);
+  if (!rawPIC) {
     console.error('Schedule data is empty');
 
     await sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
@@ -64,10 +57,8 @@ export async function sendDailyBugReminder() {
     return;
   }
 
-  const { pics } = schedule;
-
-  const dailyBugPic = await getUserIdByEmail(
-    pics[0].email,
+  const pic = await getUserIdByEmail(
+    rawPIC.email,
     env.DAILY_GOOGLE_SPACE,
     googleToken,
   );
@@ -127,7 +118,7 @@ ${
 }
 🧑 *Today's Bug PIC:*
 
-${dailyBugPic ? `<${dailyBugPic}>` : '-'}`;
+${pic ? `<${pic}>` : '-'}`;
 
   const threadStarter = await sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
     text,
