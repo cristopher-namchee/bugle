@@ -237,7 +237,7 @@ describe('getPerformanceReport', () => {
 
     const result = await getPerformanceReport(mockToken);
 
-    expect(result).toEqual([]);
+    expect(result).toBeNull();
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -329,7 +329,6 @@ describe('getAIPReport', () => {
         return HttpResponse.json({
           valueRanges: [
             {
-              // Scenario values (index 0)
               range: 'ScenarioSheet!A1:D',
               majorDimension: 'ROWS',
               values: [
@@ -340,11 +339,10 @@ describe('getAIPReport', () => {
                 [],
                 [],
                 [],
-                [null, null, '0.25s', 'Target: 5s limit'],
+                [null, null, 0.25, 'Target: 5s limit'],
               ],
             },
             {
-              // Model values (index 1)
               range: 'ModelSheet!A:D',
               majorDimension: 'ROWS',
               values: [['GPT-4o', null, null, 150]],
@@ -362,7 +360,7 @@ describe('getAIPReport', () => {
       model: 'GPT-4o',
       users: 150,
       scenario: {
-        TargetScenarioName: ['0.25s', '5s'],
+        TargetScenarioName: [0.25, '5s'],
       },
     });
     expect(spy).not.toHaveBeenCalled();

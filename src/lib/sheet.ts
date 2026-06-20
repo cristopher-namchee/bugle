@@ -1,4 +1,5 @@
 import { Spreadsheet } from '@/const';
+import type { AIPReport, BugReport, PerformanceReport } from '@/types';
 
 interface SheetsBatchGetResponse {
   valueRanges?: {
@@ -6,16 +7,6 @@ interface SheetsBatchGetResponse {
     majorDimension: string;
     values?: unknown[][];
   }[];
-}
-
-interface BugAggregate {
-  open: number[];
-  closed: number[];
-}
-
-interface BugReport {
-  internal: BugAggregate;
-  external: BugAggregate;
 }
 
 interface SpreadsheetMetadataResponse {
@@ -27,12 +18,6 @@ interface SpreadsheetMetadataResponse {
       };
     };
   }[];
-}
-
-interface AIPReport {
-  model: string;
-  users: number;
-  scenario: Record<string, [string, string]>;
 }
 
 interface SheetsValueResponse {
@@ -122,7 +107,7 @@ export async function getBugReport(token: string): Promise<BugReport | null> {
  *
  * @param {string} token Google OAuth token that will be used to fetch data.
  * Should have the spreadsheet scope.
- * @returns {Promise<BugReport | null>} A promise that resolves into benchmark data
+ * @returns {Promise<AIPReport | null>} A promise that resolves into benchmark data
  * or rejects with `null`
  */
 export async function getAIPReport(token: string): Promise<AIPReport | null> {
@@ -185,7 +170,7 @@ export async function getAIPReport(token: string): Promise<AIPReport | null> {
     const users = Number(lastRowData[3] || 0);
 
     const scenarioValues = valueRanges[0]?.values || [];
-    const scenario: Record<string, [string, string]> = {};
+    const scenario: Record<string, [number, string]> = {};
 
     for (let idx = 1; idx < scenarioValues.length; idx += 10) {
       const rowItem = scenarioValues[idx - 1];
@@ -198,7 +183,7 @@ export async function getAIPReport(token: string): Promise<AIPReport | null> {
       const scenarioName = splitParts[1] ? splitParts[1] : splitParts[0];
 
       const targetRow = scenarioValues[idx - 1 + 7];
-      const ttft = targetRow ? String(targetRow[2]) : '';
+      const ttft = targetRow ? Number(targetRow[2]) : 0;
 
       const targetRawString = targetRow[3]?.toString() ?? '';
       const matchResult = targetRawString.match(/(\d+s)/);
@@ -224,12 +209,12 @@ export async function getAIPReport(token: string): Promise<AIPReport | null> {
  *
  * @param {string} token Google OAuth token that will be used to fetch data.
  * Should have the spreadsheet scope.
- * @returns {Promise<string[] | null>} A promise that resolves into array of string that contains
- * benchmark report or rejects with `null`
+ * @returns {Promise<PerformanceReport | null>} A promise that resolves into performance report
+ * or rejects with `null`
  */
 export async function getPerformanceReport(
   token: string,
-): Promise<string[] | null> {
+): Promise<PerformanceReport | null> {
   try {
     const range = `${Spreadsheet.Bug.Name}!K27:K30`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values/${encodeURIComponent(range)}?valueRenderOption=UNFORMATTED_VALUE`;
@@ -250,7 +235,7 @@ export async function getPerformanceReport(
 
     const result: SheetsValueResponse = await response.json();
 
-    return result.values ? (result.values.flat() as string[]) : [];
+    return result.values ? (result.values.flat() as PerformanceReport) : null;
   } catch (err) {
     console.error(err);
 
