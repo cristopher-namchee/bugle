@@ -32,6 +32,7 @@ export const Spreadsheet = {
   Bug: {
     ID: '1ZGlbEKvVqaP4BL2a81sKSHaBJw11cYxkyKQpCPdPV7A',
     Name: 'REPORT',
+    PIC: 'Component PIC',
   },
   AIP: '1cs1OThqveeEb0cQPOcjsZGwewc6nuFargQ9DPL0UmqE',
 };

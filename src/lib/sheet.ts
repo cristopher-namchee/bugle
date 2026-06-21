@@ -242,3 +242,12 @@ export async function getPerformanceReport(
     return null;
   }
 }
+
+export async function mapEmailFromGithubUsername(
+  username: string,
+): Promise<string> {
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values/${Spreadsheet.Bug.PIC}!B:C`;
+    const response = await fetch();
+  } catch (err) {}
+}
