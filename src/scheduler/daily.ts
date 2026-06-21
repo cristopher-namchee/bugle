@@ -1,4 +1,5 @@
 import { IssueReporter, Repositories } from '@/const';
+import { chunkArray } from '@/lib/array';
 import { formatDate } from '@/lib/date';
 import { getCurrentlyActiveBugs } from '@/lib/github';
 import {
@@ -158,100 +159,104 @@ ${pic ? `<${pic}>` : '-'}`;
       userMapping,
     );
 
-    await Promise.all(
-      issues.map(async (issue) => {
-        const meta = extractTitleMetadata(issue.title);
+    const chunkedIssues = chunkArray(issues);
 
-        if (issue.reporter === IssueReporter.Sentry) {
-          meta.title = issue.title;
-          meta.source = 'Sentry';
-          meta.type = 'Automated Sentry Report';
-        }
+    for (const chunk of chunkedIssues) {
+      await Promise.all(
+        chunk.map(async (issue) => {
+          const meta = extractTitleMetadata(issue.title);
 
-        const issueAge = Math.round(
-          (today.getTime() - new Date(issue.created_at ?? '').getTime()) /
-            (1_000 * 60 * 60 * 24),
-        );
+          if (issue.reporter === IssueReporter.Sentry) {
+            meta.title = issue.title;
+            meta.source = 'Sentry';
+            meta.type = 'Automated Sentry Report';
+          }
 
-        const picDisplay = issue.assignees.filter(Boolean).length
-          ? `cc: ${issue.assignees.map((a) => (a.startsWith('users/') ? `<${a}>` : `\`${a}\``)).join(' ')}`
-          : '⚠️ _Unassigned_';
+          const issueAge = Math.round(
+            (today.getTime() - new Date(issue.created_at ?? '').getTime()) /
+              (1_000 * 60 * 60 * 24),
+          );
 
-        await sendMessageToThread(
-          googleToken,
-          env.DAILY_GOOGLE_SPACE,
-          threadId,
-          {
-            text: picDisplay,
-            cardsV2: [
-              {
-                cardId: `card-issue-${issue.number}`,
-                card: {
-                  header: {
-                    title: meta.title,
-                    subtitle: `#${issue.number}`,
-                  },
-                  sections: [
-                    {
-                      collapsible: true,
-                      widgets: [
-                        {
-                          decoratedText: {
-                            topLabel: 'URL',
-                            startIcon: {
-                              knownIcon: 'EMAIL',
-                            },
-                            text: `<a href="${issue.url}">${issue.url}</a>`,
-                          },
-                        },
-                        {
-                          decoratedText: {
-                            topLabel: 'Source',
-                            startIcon: {
-                              knownIcon: 'MULTIPLE_PEOPLE',
-                            },
-                            text: meta.source,
-                          },
-                        },
-                        meta.type
-                          ? {
-                              decoratedText: {
-                                topLabel: 'Type',
-                                startIcon: {
-                                  knownIcon: 'DESCRIPTION',
-                                },
-                                text: meta.type,
-                              },
-                            }
-                          : undefined,
-                        {
-                          decoratedText: {
-                            topLabel: 'Created At',
-                            startIcon: {
-                              knownIcon: 'INVITE',
-                            },
-                            text: `${formatDate(issue.created_at, { weekday: undefined })}`,
-                          },
-                        },
-                        {
-                          decoratedText: {
-                            topLabel: 'Age',
-                            startIcon: {
-                              knownIcon: 'CLOCK',
-                            },
-                            text: `${issueAge} day(s)`,
-                          },
-                        },
-                      ].filter(Boolean),
+          const picDisplay = issue.assignees.filter(Boolean).length
+            ? `cc: ${issue.assignees.map((a) => (a.startsWith('users/') ? `<${a}>` : `\`${a}\``)).join(' ')}`
+            : '⚠️ _Unassigned_';
+
+          await sendMessageToThread(
+            googleToken,
+            env.DAILY_GOOGLE_SPACE,
+            threadId,
+            {
+              text: picDisplay,
+              cardsV2: [
+                {
+                  cardId: `card-issue-${issue.number}`,
+                  card: {
+                    header: {
+                      title: meta.title,
+                      subtitle: `#${issue.number}`,
                     },
-                  ],
+                    sections: [
+                      {
+                        collapsible: true,
+                        widgets: [
+                          {
+                            decoratedText: {
+                              topLabel: 'URL',
+                              startIcon: {
+                                knownIcon: 'EMAIL',
+                              },
+                              text: `<a href="${issue.url}">${issue.url}</a>`,
+                            },
+                          },
+                          {
+                            decoratedText: {
+                              topLabel: 'Source',
+                              startIcon: {
+                                knownIcon: 'MULTIPLE_PEOPLE',
+                              },
+                              text: meta.source,
+                            },
+                          },
+                          meta.type
+                            ? {
+                                decoratedText: {
+                                  topLabel: 'Type',
+                                  startIcon: {
+                                    knownIcon: 'DESCRIPTION',
+                                  },
+                                  text: meta.type,
+                                },
+                              }
+                            : undefined,
+                          {
+                            decoratedText: {
+                              topLabel: 'Created At',
+                              startIcon: {
+                                knownIcon: 'INVITE',
+                              },
+                              text: `${formatDate(issue.created_at, { weekday: undefined })}`,
+                            },
+                          },
+                          {
+                            decoratedText: {
+                              topLabel: 'Age',
+                              startIcon: {
+                                knownIcon: 'CLOCK',
+                              },
+                              text: `${issueAge} day(s)`,
+                            },
+                          },
+                        ].filter(Boolean),
+                      },
+                    ],
+                  },
                 },
-              },
-            ],
-          },
-        );
-      }),
-    );
+              ],
+            },
+          );
+        }),
+      );
+    }
   }
 }
 
