@@ -36,3 +36,8 @@ export interface AIPReport {
   users: number;
   scenario: Record<string, [number, string]>;
 }
+
+export interface UserMappping {
+  email: string;
+  username: string;
+}

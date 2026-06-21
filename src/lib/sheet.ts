@@ -1,5 +1,10 @@
 import { Spreadsheet } from '@/const';
-import type { AIPReport, BugReport, PerformanceReport } from '@/types';
+import type {
+  AIPReport,
+  BugReport,
+  PerformanceReport,
+  UserMappping,
+} from '@/types';
 
 interface SheetsBatchGetResponse {
   valueRanges?: {
@@ -61,7 +66,7 @@ export async function getBugReport(token: string): Promise<BugReport | null> {
 
     if (!response.ok) {
       throw new Error(
-        `Google Sheets API error: ${response.status} ${response.statusText}`,
+        `Google Sheets API error when fetching bug report: ${response.status} ${response.statusText}`,
       );
     }
 
@@ -198,7 +203,7 @@ export async function getAIPReport(token: string): Promise<AIPReport | null> {
       scenario,
     };
   } catch (err) {
-    console.error('Failed to get AIP report:', err);
+    console.error('Failed to fetch AIP report:', err);
 
     return null;
   }
@@ -229,7 +234,7 @@ export async function getPerformanceReport(
 
     if (!response.ok) {
       throw new Error(
-        `Google Sheets API error: ${response.status} ${response.statusText}`,
+        `Google Sheets API error when fetching performance report: ${response.status} ${response.statusText}`,
       );
     }
 
@@ -237,17 +242,40 @@ export async function getPerformanceReport(
 
     return result.values ? (result.values.flat() as PerformanceReport) : null;
   } catch (err) {
-    console.error(err);
+    console.error('Failed to fetch performance report:', err);
 
     return null;
   }
 }
 
-export async function mapEmailFromGithubUsername(
-  username: string,
-): Promise<string> {
+export async function getGithubUserMap(token: string): Promise<UserMappping[]> {
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values/${Spreadsheet.Bug.PIC}!B:C`;
-    const response = await fetch();
-  } catch (err) {}
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${Spreadsheet.Bug.ID}/values/${Spreadsheet.Bug.PIC}!C2:D`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Google Sheets API error: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const body = (await response.json()) as SheetsValueResponse;
+
+    return (
+      body.values?.map((val) => ({
+        username: val[1] as string,
+        email: val[0] as string,
+      })) ?? []
+    );
+  } catch (err) {
+    console.error('Failed to fetch GitHub user mapping:', err);
+
+    return [];
+  }
 }

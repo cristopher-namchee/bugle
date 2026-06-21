@@ -8,17 +8,29 @@ import {
   sendMessageToThread,
 } from '@/lib/google';
 import { getBugReportPIC } from '@/lib/schedule';
+import { getGithubUserMap } from '@/lib/sheet';
 
 import { extractTitleMetadata } from '@/lib/string';
 
-import type { Bug } from '@/types';
+import type { Bug, UserMappping } from '@/types';
 
-function resolveAssignees(bugs: Bug[], space: string, token: string) {
+function resolveAssignees(
+  bugs: Bug[],
+  space: string,
+  token: string,
+  users: UserMappping[],
+) {
   return Promise.all(
     bugs.map(async (bug) => {
       const assignees: string[] = await Promise.all(
         bug.assignees.map(async (assignee) => {
-          const userId = await getUserIdByEmail(assignee, space, token);
+          const email = users.find((u) => u.username === assignee)?.email;
+
+          const userId = await getUserIdByEmail(
+            email ?? assignee,
+            space,
+            token,
+          );
           return userId ?? assignee;
         }),
       );
@@ -118,9 +130,13 @@ ${
 
 ${pic ? `<${pic}>` : '-'}`;
 
-  const threadStarter = await sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
-    text,
-  });
+  const [threadStarter, userMapping] = await Promise.all([
+    sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
+      text,
+    }),
+    getGithubUserMap(googleToken),
+  ]);
+
   if (!threadStarter) {
     return;
   }
@@ -139,6 +155,7 @@ ${pic ? `<${pic}>` : '-'}`;
       bugList,
       env.DAILY_GOOGLE_SPACE,
       googleToken,
+      userMapping,
     );
 
     await Promise.all(
