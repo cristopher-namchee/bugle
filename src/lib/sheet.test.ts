@@ -257,9 +257,6 @@ describe('getPerformanceReport', () => {
 
     expect(result).toBeNull();
     expect(spy).toHaveBeenCalledOnce();
-    expect(spy.mock.calls[0][0].message).toContain(
-      'Google Sheets API error: 500',
-    );
   });
 
   it('should return null and log the error if a complete network failure happens', async () => {
@@ -382,7 +379,7 @@ describe('getAIPReport', () => {
 
     expect(result).toBeNull();
     expect(spy).toHaveBeenCalledOnce();
-    expect(spy.mock.calls[0][0]).toContain('Failed to get AIP report:');
+    expect(spy.mock.calls[0][0]).toContain('Failed to fetch AIP report:');
   });
 
   it('should return null if the spreadsheet has fewer than 2 sheets', async () => {

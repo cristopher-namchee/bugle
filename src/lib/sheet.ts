@@ -234,7 +234,7 @@ export async function getPerformanceReport(
 
     if (!response.ok) {
       throw new Error(
-        `Google Sheets API error when fetching performance report: ${response.status} ${response.statusText}`,
+        `Google Sheets API error: ${response.status} ${response.statusText}`,
       );
     }
 
