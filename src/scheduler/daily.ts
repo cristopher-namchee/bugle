@@ -46,8 +46,6 @@ export async function sendDailyBugReminder() {
 
   const rawPIC = await getBugReportPIC(today);
   if (!rawPIC) {
-    console.error('Schedule data is empty');
-
     await sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
       text: `*🐛 GLChat Active Bug List*
 

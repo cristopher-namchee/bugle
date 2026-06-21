@@ -27,7 +27,8 @@ describe('getBugReportPIC', () => {
     mockServer.close();
   });
 
-  const targetUrl = 'https://deploynaut.cristopher-b2d.workers.dev';
+  const targetUrl =
+    'https://deploynaut.cristopher-b2d.workers.dev/api/schedule';
 
   it('should successfully fetch the list of PICs and return the first one', async () => {
     const testDate = new Date('2026-06-21T00:00:00Z');
@@ -38,7 +39,11 @@ describe('getBugReportPIC', () => {
 
     mockServer.use(
       http.get(targetUrl, () => {
-        return HttpResponse.json(mockPICList);
+        return HttpResponse.json({
+          data: {
+            schedule: mockPICList,
+          },
+        });
       }),
     );
 

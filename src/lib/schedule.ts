@@ -1,3 +1,10 @@
+interface ScheduleAPIResponse {
+  data: {
+    schedule: PIC[];
+    holiday: boolean;
+  };
+}
+
 interface PIC {
   name: string;
   email: string;
@@ -19,24 +26,24 @@ export async function getBugReportPIC(date: Date): Promise<PIC | null> {
     const params = new URLSearchParams();
     params.append(
       'date',
-      `${date.getUTCFullYear()}-${date.getUTCMonth()}-${date.getUTCDate()}`,
+      `${date.getUTCFullYear()}-${(date.getUTCMonth() + 1).toString().padStart(2, '0')}-${date.getUTCDate()}`,
     );
     url.search = params.toString();
 
-    const response = await fetch(
-      'https://deploynaut.cristopher-b2d.workers.dev',
-    );
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(`Schedule API returned ${response.status}`);
     }
 
-    const data = (await response.json()) as PIC[];
-    if (data.length <= 0) {
+    const { data } = (await response.json()) as ScheduleAPIResponse;
+    const { schedule } = data;
+
+    if (schedule.length <= 0) {
       throw new Error('Malformed schedule data (less than 1)');
     }
 
-    return data[0] as PIC;
+    return schedule[0] as PIC;
   } catch (err) {
     console.error('Failed to get PIC:', err);
 
