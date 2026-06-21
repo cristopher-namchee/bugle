@@ -10,7 +10,12 @@ import {
   it,
   vi,
 } from 'vitest';
-import { getGoogleAuthToken, getUserIdByEmail } from '@/lib/google';
+import {
+  getGoogleAuthToken,
+  getUserIdByEmail,
+  sendMessage,
+  sendMessageToThread,
+} from '@/lib/google';
 
 const mockServer = setupServer();
 
@@ -195,5 +200,181 @@ describe('getGoogleUserID', () => {
 
     expect(result).toBe('users/1234');
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendMessage', () => {
+  beforeAll(async () => {
+    mockServer.listen();
+  });
+
+  afterEach(() => {
+    mockServer.resetHandlers();
+    vi.resetAllMocks();
+  });
+
+  afterAll(() => {
+    mockServer.close();
+  });
+
+  const mockToken = 'mock-token';
+  const mockChannel = 'space-123';
+  const mockMessage = { text: 'Hello World' };
+  const mockResponseData = {
+    name: 'spaces/space-123/messages/msg-999',
+    text: 'Hello World',
+  };
+
+  it('should return message response data when the message is successfully sent', async () => {
+    mockServer.use(
+      http.post(
+        `https://chat.googleapis.com/v1/spaces/${mockChannel}/messages`,
+        async ({ request }) => {
+          expect(request.headers.get('Authorization')).toBe(
+            `Bearer ${mockToken}`,
+          );
+          expect(request.headers.get('Content-Type')).toBe('application/json');
+
+          const body = await request.json();
+          expect(body).toEqual(mockMessage);
+
+          return HttpResponse.json(mockResponseData);
+        },
+      ),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await sendMessage(mockToken, mockChannel, mockMessage);
+
+    expect(result).toEqual(mockResponseData);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should return null and log an error when the API returns a non-200 status', async () => {
+    mockServer.use(
+      http.post(
+        `https://chat.googleapis.com/v1/spaces/${mockChannel}/messages`,
+        () => {
+          return new HttpResponse(null, { status: 400 });
+        },
+      ),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await sendMessage(mockToken, mockChannel, mockMessage);
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0]).toContain(
+      `Failed to send message to channel ${mockChannel}:`,
+    );
+  });
+
+  it('should return null and log an error if a network error occurs', async () => {
+    mockServer.use(
+      http.post(
+        `https://chat.googleapis.com/v1/spaces/${mockChannel}/messages`,
+        () => {
+          return HttpResponse.error();
+        },
+      ),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await sendMessage(mockToken, mockChannel, mockMessage);
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+  });
+});
+
+describe('sendMessageToThread', () => {
+  beforeAll(async () => {
+    mockServer.listen();
+  });
+
+  afterEach(() => {
+    mockServer.resetHandlers();
+    vi.resetAllMocks();
+  });
+
+  afterAll(() => {
+    mockServer.close();
+  });
+
+  const mockToken = 'mock-token';
+  const mockChannel = 'space-123';
+  const mockThread = 'spaces/space-123/threads/thread-456';
+  const mockMessage = { text: 'Hello Reply' };
+  const mockResponseData = {
+    name: 'spaces/space-123/messages/msg-888',
+    text: 'Hello Reply',
+    thread: { name: mockThread },
+  };
+
+  it('should return message response data when reply is successfully sent to a thread', async () => {
+    mockServer.use(
+      http.post(
+        `https://chat.googleapis.com/v1/spaces/${mockChannel}/messages`,
+        async ({ request }) => {
+          const url = new URL(request.url);
+          expect(url.searchParams.get('messageReplyOption')).toBe(
+            'REPLY_MESSAGE_OR_FAIL',
+          );
+          expect(request.headers.get('Authorization')).toBe(
+            `Bearer ${mockToken}`,
+          );
+
+          const body = await request.json();
+          expect(body).toEqual({
+            ...mockMessage,
+            thread: { name: mockThread },
+          });
+
+          return HttpResponse.json(mockResponseData);
+        },
+      ),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await sendMessageToThread(
+      mockToken,
+      mockChannel,
+      mockThread,
+      mockMessage,
+    );
+
+    expect(result).toEqual(mockResponseData);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('should return null and log an error when the thread payload API returns a non-200 status', async () => {
+    mockServer.use(
+      http.post(
+        `https://chat.googleapis.com/v1/spaces/${mockChannel}/messages`,
+        () => {
+          return new HttpResponse(null, { status: 404 });
+        },
+      ),
+    );
+
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await sendMessageToThread(
+      mockToken,
+      mockChannel,
+      mockThread,
+      mockMessage,
+    );
+
+    expect(result).toBeNull();
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0][0]).toContain(
+      `Failed to send message to thread ${mockThread} in channel ${mockChannel}:`,
+    );
   });
 });

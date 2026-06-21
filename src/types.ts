@@ -17,3 +17,27 @@ export interface IssueMetadata {
 export interface Env {
   GITHUB_TOKEN: string;
 }
+
+/* Weekly Report */
+interface BugAggregate {
+  open: number[];
+  closed: number[];
+}
+
+export interface BugReport {
+  internal: BugAggregate;
+  external: BugAggregate;
+}
+
+export type PerformanceReport = [string, string, string, string];
+
+export interface AIPReport {
+  model: string;
+  users: number;
+  scenario: Record<string, [number, string]>;
+}
+
+export interface UserMappping {
+  email: string;
+  username: string;
+}

@@ -9,6 +9,7 @@ export const JWT = {
     'https://www.googleapis.com/auth/chat.messages.create',
     'https://www.googleapis.com/auth/chat.messages',
     'https://www.googleapis.com/auth/chat.memberships',
+    'https://www.googleapis.com/auth/spreadsheets.readonly',
   ],
   Algorithm: 'RS256',
   Grant: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
@@ -26,3 +27,12 @@ export const Repositories: Record<string, string> = {
 };
 
 export const DefaultChunkSize = 5;
+
+export const Spreadsheet = {
+  Bug: {
+    ID: '1ZGlbEKvVqaP4BL2a81sKSHaBJw11cYxkyKQpCPdPV7A',
+    Name: 'REPORT',
+    PIC: 'Component PIC',
+  },
+  AIP: '1cs1OThqveeEb0cQPOcjsZGwewc6nuFargQ9DPL0UmqE',
+};

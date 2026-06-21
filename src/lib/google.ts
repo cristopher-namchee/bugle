@@ -8,6 +8,130 @@ interface GoogleUserAPIResponse {
   name: string;
 }
 
+interface ChatMessage {
+  text?: string;
+  cardsV2?: CardV2Envelope[];
+}
+
+interface CardV2Envelope {
+  cardId: string;
+  card: CardV2;
+}
+
+interface CardV2 {
+  header?: CardHeader;
+  sections?: CardSection[];
+  fixedFooter?: CardFixedFooter;
+  name?: string;
+}
+
+interface CardHeader {
+  title: string;
+  subtitle?: string;
+  imageUrl?: string;
+  imageType?: 'SQUARE' | 'CIRCLE';
+  imageAltText?: string;
+}
+
+interface CardSection {
+  header?: string;
+  widgets?: (Widget | undefined)[];
+  collapsible?: boolean;
+  uncollapsibleWidgetsCount?: number;
+}
+
+interface Widget {
+  textParagraph?: TextParagraphWidget;
+  decoratedText?: DecoratedTextWidget;
+  image?: ImageWidget;
+  buttonList?: ButtonListWidget;
+  textInput?: TextInputWidget;
+}
+
+interface TextParagraphWidget {
+  text: string;
+}
+
+interface DecoratedTextWidget {
+  topLabel?: string;
+  text: string;
+  bottomLabel?: string;
+  startIcon?: Icon;
+  endIcon?: Icon;
+  onClick?: OnClickAction;
+}
+
+interface ImageWidget {
+  imageUrl: string;
+  onClick?: OnClickAction;
+  altText?: string;
+}
+
+export interface ButtonListWidget {
+  buttons: Button[];
+}
+
+interface Button {
+  text?: string;
+  icon?: Icon;
+  color?: Color;
+  onClick: OnClickAction;
+  disabled?: boolean;
+}
+
+interface Icon {
+  knownIcon?: string;
+  iconUrl?: string;
+  altText?: string;
+  imageType?: 'SQUARE' | 'CIRCLE';
+}
+
+interface Color {
+  red: number;
+  green: number;
+  blue: number;
+  alpha?: number;
+}
+
+interface OnClickAction {
+  action?: FormAction;
+  openLink?: OpenLink;
+}
+
+interface FormAction {
+  functionName: string;
+  parameters?: ActionParameter[];
+  loadIndicator?: 'SPINNER' | 'NONE';
+}
+
+interface ActionParameter {
+  key: string;
+  value: string;
+}
+
+interface OpenLink {
+  url: string;
+}
+
+interface CardFixedFooter {
+  primaryButton?: Button;
+  secondaryButton?: Button;
+}
+
+interface TextInputWidget {
+  name: string;
+  label?: string;
+  hintText?: string;
+  value?: string;
+  type?: 'SINGLE_LINE' | 'MULTIPLE_LINE';
+}
+
+interface MessageResponse {
+  thread: {
+    name: string;
+  };
+}
+
 function b64(input: ArrayBuffer | string) {
   const bytes =
     typeof input === 'string'
@@ -160,5 +284,95 @@ export async function getUserIdByEmail(
     console.warn('Failed to get Google user ID:', err);
 
     return email;
+  }
+}
+
+/**
+ * Sends a message to a Google Space channel.
+ *
+ * @param {string} token Google OAuth access token
+ * @param {string} channel Google Space channel ID to send the message
+ * @param {ChatMessage} message Google Chat compliant message object
+ * @returns A Promise that resolves to a message object that contains thread information
+ * or `null` if the request failed.
+ */
+export async function sendMessage(
+  token: string,
+  channel: string,
+  message: ChatMessage,
+): Promise<MessageResponse | null> {
+  try {
+    const response = await fetch(
+      `https://chat.googleapis.com/v1/spaces/${channel}/messages`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`response returned ${response.status}`);
+    }
+
+    return response.json();
+  } catch (err) {
+    console.error(`Failed to send message to channel ${channel}:`, err);
+
+    return null;
+  }
+}
+
+/**
+ * Sends a message as a reply to a thread in a Google Space channel.
+ *
+ * @param {string} token Google OAuth access token
+ * @param {string} channel Google Space channel ID to send the message
+ * @param {string} thread Parent thread ID
+ * @param {ChatMessage} message Google Chat compliant message object
+ * @returns A Promise that resolves to a message object that contains thread information
+ * or `null` if the request failed.
+ */
+export async function sendMessageToThread(
+  token: string,
+  channel: string,
+  thread: string,
+  message: ChatMessage,
+): Promise<MessageResponse | null> {
+  try {
+    const response = await fetch(
+      `https://chat.googleapis.com/v1/spaces/${channel}/messages?messageReplyOption=REPLY_MESSAGE_OR_FAIL`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...message,
+          thread: {
+            name: thread,
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `failed to send message to thread, response returned ${response.status}`,
+      );
+    }
+
+    return response.json();
+  } catch (err) {
+    console.error(
+      `Failed to send message to thread ${thread} in channel ${channel}:`,
+      err,
+    );
+
+    return null;
   }
 }

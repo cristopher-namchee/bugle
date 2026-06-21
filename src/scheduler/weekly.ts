@@ -1,18 +1,12 @@
 import { AIPModel } from '@/const';
 import { formatDate } from '@/lib/date';
-import { getGoogleAuthToken } from '@/lib/google';
+import { getGoogleAuthToken, sendMessage } from '@/lib/google';
 
-import {
-  type AIP,
-  type Bugs,
-  getReport,
-  type Performance,
-  type ResourceData,
-} from '@/lib/sheet';
+import { getAIPReport, getBugReport, getPerformanceReport } from '@/lib/sheet';
+import type { AIPReport, BugReport, PerformanceReport } from '@/types';
 
-function constructPerformanceReport(data: ResourceData<Performance>) {
-  const { data: performance } = data;
-  if (!performance) {
+function constructPerformanceReport(data: PerformanceReport | null) {
+  if (!data) {
     return `*⏱️ Performance Report*
 
 ⚠️ _Failed to fetch performance report. Please check the execution log._`;
@@ -20,15 +14,14 @@ function constructPerformanceReport(data: ResourceData<Performance>) {
 
   return `*⏱️ Performance Report*
 
-_${performance[0]}_
-  ${performance[1]}
-  ${performance[2]}
-  ${performance[3]}`;
+_${data[0]}_
+  ${data[1]}
+  ${data[2]}
+  ${data[3]}`;
 }
 
-function constructAIPReport(data: ResourceData<AIP>) {
-  const { data: aip } = data;
-  if (!aip) {
+function constructAIPReport(data: AIPReport | null) {
+  if (!data) {
     return `*🏃 GL AIP Report*
 
 ⚠️ _Failed to fetch GL AIP report. Please check the execution log._`;
@@ -36,13 +29,12 @@ function constructAIPReport(data: ResourceData<AIP>) {
 
   return `*🏃 GL AIP Report*
 
-_${AIPModel}, ${aip.users} Concurrent Users_
-${Object.entries(aip.scenario).reduce((acc, curr, idx) => `${acc}    Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`;
+_${AIPModel}, ${data.users} Concurrent Users_
+${Object.entries(data.scenario).reduce((acc, curr, idx) => `${acc}    Scenario ${idx + 1} ${curr[0]}: ${curr[1][0].toFixed(3)}s from target ${curr[1][1]}\n`, '')}`;
 }
 
-function constructWeeklyBugReport(data: ResourceData<Bugs>): string {
-  const { data: bugs } = data;
-  if (!bugs) {
+function constructWeeklyBugReport(data: BugReport | null): string {
+  if (!data) {
     return `*🐛 Weekly Bug Report*
 
 ⚠️ _Failed to fetch weekly bug report. Please check the execution log._`;
@@ -52,29 +44,29 @@ function constructWeeklyBugReport(data: ResourceData<Bugs>): string {
 
 _Bugs from Internal Report_
 
-  Total Opened: ${bugs.internal.open.reduce((acc, curr) => acc + curr, 0)} bug(s)
-    P0: ${bugs.internal.open[0]} bug(s)
-    P1: ${bugs.internal.open[1]} bug(s)
-    P2: ${bugs.internal.open[2]} bug(s)
+  Total Opened: ${data.internal.open.reduce((acc, curr) => acc + curr, 0)} bug(s)
+    P0: ${data.internal.open[0]} bug(s)
+    P1: ${data.internal.open[1]} bug(s)
+    P2: ${data.internal.open[2]} bug(s)
 
-  Total Closed: ${bugs.internal.closed.reduce((acc, curr) => acc + curr, 0)} bug(s)
-    P0: ${bugs.internal.closed[0]} bug(s)
-    P1: ${bugs.internal.closed[1]} bug(s)
-    P2: ${bugs.internal.closed[2]} bug(s)
-    Closed As Enhancements: ${bugs.internal.closed[3]} bug(s)
+  Total Closed: ${data.internal.closed.reduce((acc, curr) => acc + curr, 0)} bug(s)
+    P0: ${data.internal.closed[0]} bug(s)
+    P1: ${data.internal.closed[1]} bug(s)
+    P2: ${data.internal.closed[2]} bug(s)
+    Closed As Enhancements: ${data.internal.closed[3]} bug(s)
 
 _Bugs from External Report_
 
-  Total Opened: ${bugs.external.open.reduce((acc, curr) => acc + curr, 0)} bug(s)
-    P0: ${bugs.external.open[0]} bug(s)
-    P1: ${bugs.external.open[1]} bug(s)
-    P2: ${bugs.external.open[2]} bug(s)
+  Total Opened: ${data.external.open.reduce((acc, curr) => acc + curr, 0)} bug(s)
+    P0: ${data.external.open[0]} bug(s)
+    P1: ${data.external.open[1]} bug(s)
+    P2: ${data.external.open[2]} bug(s)
 
-  Total Closed: ${bugs.external.closed.reduce((acc, curr) => acc + curr, 0)} bug(s)
-    P0: ${bugs.external.closed[0]} bug(s)
-    P1: ${bugs.external.closed[1]} bug(s)
-    P2: ${bugs.external.closed[2]} bug(s)
-    Closed As Enhancements: ${bugs.external.closed[3]} bug(s)`;
+  Total Closed: ${data.external.closed.reduce((acc, curr) => acc + curr, 0)} bug(s)
+    P0: ${data.external.closed[0]} bug(s)
+    P1: ${data.external.closed[1]} bug(s)
+    P2: ${data.external.closed[2]} bug(s)
+    Closed As Enhancements: ${data.external.closed[3]} bug(s)`;
 }
 
 export async function sendWeeklyBugReport() {
@@ -92,42 +84,26 @@ export async function sendWeeklyBugReport() {
   const firstDate = new Date();
   firstDate.setDate(1);
 
-  const weeklyStats = await getReport();
+  const [bugs, performance, aip] = await Promise.all([
+    getBugReport(token),
+    getPerformanceReport(token),
+    getAIPReport(token),
+  ]);
 
-  if (!weeklyStats) {
-    await fetch(
-      `https://chat.googleapis.com/v1/spaces/${env.WEEKLY_GOOGLE_SPACE}/messages`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `*📊 GLChat Weekly Report*
+  if (!bugs && !performance && !aip) {
+    await sendMessage(token, env.WEEKLY_GOOGLE_SPACE, {
+      text: `*📊 GLChat Weekly Report*
 
 Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)
 
-⚠️ _Failed to fetch data from API. Please check the execution logs_.`,
-        }),
-      },
-    );
+⚠️ _Failed to fetch data from Google Sheet. Please check the execution logs_.`,
+    });
 
     return;
   }
 
-  const { bugs, performance, aip } = weeklyStats;
-
-  await fetch(
-    `https://chat.googleapis.com/v1/spaces/${env.WEEKLY_GOOGLE_SPACE}/messages`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        text: `*📊 GLChat Weekly Report*
+  await sendMessage(token, env.WEEKLY_GOOGLE_SPACE, {
+    text: `*📊 GLChat Weekly Report*
 
 Month-to-Date (*${formatDate(firstDate, { weekday: undefined })}* until *${formatDate(today, { weekday: undefined })}*)
 
@@ -136,9 +112,7 @@ ${constructWeeklyBugReport(bugs)}
 ${constructPerformanceReport(performance)}
 
 ${constructAIPReport(aip)}`.trim(),
-      }),
-    },
-  );
+  });
 }
 
 (async () => {
