@@ -85,51 +85,57 @@ export async function sendDailyBugReminder() {
   );
 
   const bugs = rawBugs.reduce(
-    (acc, curr) => {
-      if (!curr[1]) {
-        return acc;
-      }
-
-      acc[curr[0]] = curr[1];
-
+    (acc, [label, bugList]) => {
+      acc[label] = {
+        bugs: bugList ?? [],
+        error: bugList === undefined,
+      };
       return acc;
     },
-    {} as Record<string, Bug[]>,
+    {} as Record<string, { error: boolean; bugs: Bug[] }>,
   );
 
+  const hasError = Object.values(bugs).some((b) => b.error);
+
   const bugCount = Object.values(bugs).reduce(
-    (acc, curr) => acc + curr.length,
+    (acc, curr) => acc + curr.bugs.length,
     0,
   );
 
-  const text = `*🐛 GLChat Ecosystem Active Bug List*
+  const countDisplay = hasError ? '⚠️' : bugCount;
+  const pluralBug = bugCount === 1 ? 'bug' : 'bugs';
+  const headerEnding = bugCount > 0 || hasError ? ':' : ' 🎉';
 
-There are *${bugCount}* active ${bugCount === 1 ? 'bug' : 'bugs'} in GLChat ecosystem per *${formatDate(today)}*${bugCount > 0 ? ':' : ' 🎉'}
-${
-  bugCount
-    ? `
-${Object.entries(bugs)
-  .map(
-    ([label, bugs]) =>
-      `- *${label}*, ${bugs.length} ${bugs.length === 1 ? 'bug' : 'bugs'}`,
-  )
-  .join('\n')}`
-    : ''
-}
-${
-  bugCount
-    ? `
-✅ *Things to do as when assigned to a bug:*
+  const breakdownList = bugCount
+    ? Object.entries(bugs)
+        .map(([label, { bugs, error }]) => {
+          const status = error
+            ? '⚠️'
+            : `${bugs.length} ${bugs.length === 1 ? 'bug' : 'bugs'}`;
+          return `- *${label}*, ${status}`;
+        })
+        .join('\n')
+    : '_Failed to fetch issues from repositories. Please check the execution logs._';
 
-- Investigate the issue that you've been assigned to.
-- Provide a status update on the issue page.
-- If you can't provide a status update to the issue, please state the reason in this thread.
-`
-    : ''
-}
-🧑 *Today's Bug PIC:*
+  const instructions = bugCount
+    ? `✅ *Things to do as when assigned to a bug:*\n
+  - Investigate the issue that you've been assigned to.
+  - Provide a status update on the issue page.
+  - If you can't provide a status update to the issue, please state the reason in this thread.`
+    : '';
 
-${pic ? `<${pic}>` : '-'}`;
+  const picDisplay = pic ? `<${pic}>` : '-';
+
+  const text = [
+    '*🐛 GLChat Ecosystem Active Bug List*',
+    `There are *${countDisplay}* active ${pluralBug} in GLChat ecosystem per *${formatDate(today)}*${headerEnding}`,
+    breakdownList,
+    instructions,
+    "🧑 *Today's Bug PIC:*",
+    picDisplay,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   const [threadStarter, userMapping] = await Promise.all([
     sendMessage(googleToken, env.DAILY_GOOGLE_SPACE, {
@@ -143,7 +149,7 @@ ${pic ? `<${pic}>` : '-'}`;
   }
   const threadId = threadStarter.thread.name;
 
-  for (const [label, bugList] of Object.entries(bugs)) {
+  for (const [label, { bugs: bugList }] of Object.entries(bugs)) {
     if (bugList.length === 0) {
       continue;
     }
