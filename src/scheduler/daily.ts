@@ -104,18 +104,18 @@ export async function sendDailyBugReminder() {
 
   const text = `*🐛 GLChat Ecosystem Active Bug List*
 
-There are *${bugCount}* active ${bugCount === 1 ? 'bug' : 'bugs'} in GLChat ecosystem per *${formatDate(today)}*${bugCount > 0 ? ':' : ' 🎉'}
-${
-  bugCount
-    ? `
+There are *${bugCount}* active ${bugCount === 1 ? 'bug' : 'bugs'} in GLChat ecosystem per *${formatDate(today)}*${bugCount > 0 ? ':' : ' 🎉'}${
+    bugCount
+      ? `
+
 ${Object.entries(bugs)
   .map(
     ([label, bugs]) =>
       `- *${label}*, ${bugs.length} ${bugs.length === 1 ? 'bug' : 'bugs'}`,
   )
   .join('\n')}`
-    : ''
-}
+      : ''
+  }
 ${
   bugCount
     ? `
